@@ -5,8 +5,8 @@ class LocationCoordinates(BaseModel):
     lat: float
     lng: float
     address: str
-    city: str = "Tiruchirappalli"
-    pincode: str = "620018"
+    city: str = "Avadi"
+    pincode: str = "600054"
     landmark: Optional[str] = None
 
 class UserBase(BaseModel):
@@ -119,7 +119,7 @@ class WorkerRegisterRequest(BaseModel):
     serviceRadiusKm: float = 8.0
     baseChargePerHour: float = 350.0
     cooperativeId: Optional[str] = "coop-1"
-    cooperativeName: Optional[str] = "Trichy Local Service Cooperative Society"
+    cooperativeName: Optional[str] = "Avadi Skilled Workers Cooperative Society"
     shop: Optional[ShopDetails] = None
     documents: List[WorkerDocumentResponse] = []
 
@@ -147,7 +147,7 @@ class ServiceRequestCreate(BaseModel):
     urgency: str = "medium"  # low, medium, high, emergency
     isEmergency: bool = False
     workerId: Optional[str] = None
-    amount: float = 450.0
+    amount: Optional[float] = None
     matchScore: Optional[float] = None
     matchReasons: Optional[List[str]] = None
     location: Optional[LocationCoordinates] = None
@@ -188,6 +188,8 @@ class ServiceRequestResponse(BaseModel):
     paymentBreakdown: Optional[PaymentBreakdown] = None
     paymentMethod: Optional[str] = None
     paymentStatus: Optional[str] = "pending"
+    paymentUpiId: Optional[str] = None
+    paymentQrData: Optional[str] = None
     rating: Optional[float] = None
     reviewText: Optional[str] = None
     verificationOtp: str
@@ -232,6 +234,18 @@ class AIServiceAnalysis(BaseModel):
 
 class AIAnalysisRequest(BaseModel):
     input: str
+
+class AIChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=500)
+    history: List[Dict[str, str]] = []
+
+class AIChatResponse(BaseModel):
+    reply: str
+    intent: str
+    detectedService: Optional[str] = None
+    urgency: Optional[str] = None
+    estimatedCostRange: Optional[str] = None
+    suggestedAction: Optional[str] = None
 
 class RatingReviewCreate(BaseModel):
     serviceRequestId: str
@@ -315,11 +329,11 @@ class UserRegisterRequest(BaseModel):
     password: Optional[str] = "password123"
     role: str = "customer"  # customer, worker, cooperative_admin, platform_admin
     avatar: Optional[str] = None
-    address: Optional[str] = "Usman Road, T. Nagar, Chennai"
-    city: Optional[str] = "Chennai"
-    pincode: Optional[str] = "600017"
-    lat: Optional[float] = 13.0418
-    lng: Optional[float] = 80.2341
+    address: Optional[str] = "Avadi Main Road, Avadi"
+    city: Optional[str] = "Avadi"
+    pincode: Optional[str] = "600054"
+    lat: Optional[float] = 13.1147
+    lng: Optional[float] = 80.1048
     landmark: Optional[str] = None
     # Optional worker fields if registering as worker
     primaryCategory: Optional[str] = None

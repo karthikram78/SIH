@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -22,7 +22,7 @@ import {
   Scale,
 } from 'lucide-react';
 
-export default function RequestServicePage() {
+function RequestServiceContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get('category') || 'Plumbing';
@@ -264,5 +264,13 @@ export default function RequestServicePage() {
         <Footer />
       </div>
     </RoleGuard>
+  );
+}
+
+export default function RequestServicePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
+      <RequestServiceContent />
+    </Suspense>
   );
 }

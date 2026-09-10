@@ -23,8 +23,8 @@ class User(Base):
     email = Column(String(100), nullable=False, index=True)
     role = Column(String(30), nullable=False, default="customer")  # customer, worker, cooperative_admin, platform_admin
     avatar = Column(Text, nullable=True)
-    lat = Column(Float, nullable=False, default=13.0418)
-    lng = Column(Float, nullable=False, default=80.2341)
+    lat = Column(Float, nullable=False, default=13.1147)
+    lng = Column(Float, nullable=False, default=80.1048)
     address = Column(String(255), nullable=False)
     city = Column(String(100), nullable=False, default="Chennai")
     pincode = Column(String(10), nullable=False, default="600017")
@@ -146,8 +146,8 @@ class ServiceRequest(Base):
     lat = Column(Float, nullable=False)
     lng = Column(Float, nullable=False)
     address = Column(String(255), nullable=False)
-    city = Column(String(100), nullable=False, default="Tiruchirappalli")
-    pincode = Column(String(10), nullable=False, default="620018")
+    city = Column(String(100), nullable=False, default="Avadi")
+    pincode = Column(String(10), nullable=False, default="600054")
     landmark = Column(String(255), nullable=True)
 
     # Status & Assignment
@@ -176,6 +176,8 @@ class ServiceRequest(Base):
 
     payment_method = Column(String(30), nullable=True)  # UPI, Cash, CoopWallet
     payment_status = Column(String(20), default="pending")  # pending, completed
+    payment_upi_id = Column(String(100), nullable=True)
+    payment_qr_data = Column(Text, nullable=True)
     rating = Column(Float, nullable=True)
     review_text = Column(Text, nullable=True)
     verification_otp = Column(String(10), nullable=False)

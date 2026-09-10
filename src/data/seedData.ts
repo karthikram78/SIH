@@ -202,7 +202,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
   }
 ];
 
-export const INITIAL_WORKERS: Worker[] = [
+export const INITIAL_WORKERS: Worker[] = ([
   {
     id: 'worker-1',
     userId: 'user-w-1',
@@ -948,7 +948,18 @@ export const INITIAL_WORKERS: Worker[] = [
     joinedDate: '2024-09-01',
     responseTimeMinutes: 10,
   }
-];
+] as Worker[]).map((worker): Worker => ({
+  ...worker,
+  location: {
+    ...worker.location,
+    lat: 13.1147,
+    lng: 80.1048,
+    address: 'Avadi Main Road, Avadi',
+    city: 'Avadi',
+    pincode: '600054',
+    landmark: 'Avadi Service Center',
+  },
+}));
 
 export const INITIAL_SERVICE_REQUESTS: ServiceRequest[] = [
   {

@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 
 export default function WorkerProfilePage() {
-  const { currentWorker, workers } = useApp();
+  const { currentWorker, updateWorkerProfile } = useApp();
 
   const [name, setName] = useState(currentWorker.name);
   const [headline, setHeadline] = useState(currentWorker.headline);
@@ -31,14 +31,25 @@ export default function WorkerProfilePage() {
   const [serviceRadiusKm, setServiceRadiusKm] = useState(currentWorker.serviceRadiusKm);
   const [savedMsg, setSavedMsg] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    currentWorker.name = name;
-    currentWorker.headline = headline;
-    currentWorker.bio = bio;
-    currentWorker.baseChargePerHour = Number(hourlyRate);
-    currentWorker.experienceYears = Number(experienceYears);
-    currentWorker.serviceRadiusKm = Number(serviceRadiusKm);
+    const validatedRate = Number(hourlyRate);
+    if (!Number.isFinite(validatedRate) || validatedRate < 50 || validatedRate > 10000) {
+      setErrorMsg('Hourly charge must be between ₹50 and ₹10,000.');
+      return;
+    }
+
+    setErrorMsg('');
+    await updateWorkerProfile(currentWorker.id, {
+      name,
+      headline,
+      bio,
+      baseChargePerHour: Math.round(validatedRate),
+      experienceYears: Number(experienceYears),
+      serviceRadiusKm: Number(serviceRadiusKm),
+    });
 
     setSavedMsg(true);
     setTimeout(() => setSavedMsg(false), 3000);
@@ -88,6 +99,12 @@ export default function WorkerProfilePage() {
               </div>
             )}
 
+            {errorMsg && (
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-300 text-rose-800 text-xs font-bold">
+                {errorMsg}
+              </div>
+            )}
+
             <form onSubmit={handleSave} className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -118,6 +135,9 @@ export default function WorkerProfilePage() {
                     type="number"
                     value={hourlyRate}
                     onChange={(e) => setHourlyRate(Number(e.target.value))}
+                    min={50}
+                    max={10000}
+                    step={50}
                     required
                     className="w-full p-3 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-amber-500"
                   />

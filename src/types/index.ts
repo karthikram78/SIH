@@ -204,6 +204,8 @@ export interface ServiceRequest {
   paymentBreakdown?: PaymentBreakdown;
   paymentMethod?: 'UPI' | 'Cash' | 'CoopWallet';
   paymentStatus?: 'pending' | 'completed';
+  paymentUpiId?: string;
+  paymentQrData?: string;
   rating?: number;
   reviewText?: string;
   verificationOtp?: string;

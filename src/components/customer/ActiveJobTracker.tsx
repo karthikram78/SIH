@@ -74,6 +74,9 @@ export const ActiveJobTracker: React.FC<ActiveJobTrackerProps> = ({ request }) =
     cooperativePercentage: 10,
     platformPercentage: 5,
   };
+  const paymentQrUrl = request.paymentQrData
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(request.paymentQrData)}`
+    : '';
 
   return (
     <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden mb-8">
@@ -428,6 +431,21 @@ export const ActiveJobTracker: React.FC<ActiveJobTrackerProps> = ({ request }) =
                   <span>Coop Wallet</span>
                 </button>
               </div>
+
+              {selectedPaymentMethod === 'UPI' && paymentQrUrl && (
+                <div className="mt-4 flex flex-col sm:flex-row items-center gap-4 rounded-2xl border border-saffron-200 bg-saffron-50 p-4">
+                  <img
+                    src={paymentQrUrl}
+                    alt={`Scan to pay ₹${breakdown.totalAmount} to Avadi Connect`}
+                    className="h-40 w-40 rounded-xl border-4 border-white bg-white shadow-sm"
+                  />
+                  <div className="text-center sm:text-left">
+                    <p className="text-sm font-black text-slate-900">Scan to pay ₹{breakdown.totalAmount}</p>
+                    <p className="mt-1 text-xs text-slate-600">UPI payment for this service request</p>
+                    <p className="mt-2 text-xs font-bold text-slate-800">{request.paymentUpiId}</p>
+                  </div>
+                </div>
+              )}
 
               <button
                 onClick={handlePay}

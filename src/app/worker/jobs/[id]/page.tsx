@@ -30,6 +30,7 @@ export default function SingleWorkerJobPage() {
 
   const [otpInput, setOtpInput] = useState('');
   const [otpError, setOtpError] = useState(false);
+  const [finalAmount, setFinalAmount] = useState('');
 
   const request = useMemo(() => {
     return serviceRequests.find((r) => r.id === jobId);
@@ -60,6 +61,12 @@ export default function SingleWorkerJobPage() {
     } else {
       setOtpError(true);
     }
+  };
+
+  const handleComplete = () => {
+    const amount = Number(finalAmount);
+    if (!Number.isFinite(amount) || amount < 100 || amount > 50000) return;
+    updateJobStatus(request.id, 'completed', { amount });
   };
 
   const isCompleted = request.status === 'completed' || request.status === 'paid';
@@ -189,12 +196,27 @@ export default function SingleWorkerJobPage() {
                   <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-medium">
                     Work is currently in progress. Ensure customer satisfaction and clean up after completing service.
                   </div>
+                  <label className="block text-xs font-bold text-slate-700">
+                    Final service amount for this location
+                    <span className="mt-1 flex items-center gap-2">
+                      <IndianRupee className="w-4 h-4 text-amber-600" />
+                      <input
+                        type="number"
+                        min={100}
+                        max={50000}
+                        value={finalAmount || request.amount}
+                        onChange={(e) => setFinalAmount(e.target.value)}
+                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold"
+                      />
+                    </span>
+                    <span className="mt-1 block text-[11px] font-normal text-slate-500">Adjust for travel, parts, urgency, or the actual work completed. The customer will review this amount before paying.</span>
+                  </label>
                   <button
-                    onClick={() => handleAdvanceStatus('completed')}
+                    onClick={handleComplete}
                     className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-2"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>Mark Service Completed</span>
+                    <span>Send ₹{finalAmount || request.amount} Invoice & Complete</span>
                   </button>
                 </div>
               )}

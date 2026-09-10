@@ -195,6 +195,25 @@ export async function analyzeServiceRequestApi(input: string): Promise<AIService
   });
 }
 
+export interface AIChatApiResponse {
+  reply: string;
+  intent: string;
+  detectedService?: string;
+  urgency?: string;
+  estimatedCostRange?: string;
+  suggestedAction?: string;
+}
+
+export async function chatWithAssistantApi(payload: {
+  message: string;
+  history?: { role: 'user' | 'assistant'; text: string }[];
+}): Promise<AIChatApiResponse> {
+  return request<AIChatApiResponse>('/ai/chat', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function fetchDemandForecastsApi(): Promise<DemandForecastItem[]> {
   return request<DemandForecastItem[]>('/ai/demand-forecast');
 }

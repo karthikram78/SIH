@@ -42,6 +42,9 @@ def submit_review(
     payload: RatingReviewCreate,
     db: Session = Depends(get_db)
 ):
+    if payload.rating < 1 or payload.rating > 5:
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5 stars.")
+
     worker = db.query(Worker).filter(Worker.id == payload.workerId).first()
     if not worker:
         raise HTTPException(status_code=404, detail="Worker not found")

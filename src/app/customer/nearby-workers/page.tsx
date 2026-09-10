@@ -34,6 +34,7 @@ export default function NearbyWorkersPage() {
     isLiveLocationActive,
     startLiveTracking,
     stopLiveTracking,
+    setUserLocation,
     reviews,
   } = useApp();
 
@@ -141,6 +142,7 @@ export default function NearbyWorkersPage() {
                 userLocation={userLocation}
                 selectedWorkerId={selectedWorkerId}
                 onSelectWorker={(w) => setSelectedWorkerId(w.id)}
+                onLocationChange={setUserLocation}
               />
             </div>
 

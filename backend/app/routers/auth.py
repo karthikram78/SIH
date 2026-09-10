@@ -41,11 +41,11 @@ def user_to_response(user: User) -> UserResponse:
         role=user.role,
         avatar=user.avatar or "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
         location=LocationCoordinates(
-            lat=user.lat or 13.0418,
-            lng=user.lng or 80.2341,
-            address=user.address or "Usman Road, T. Nagar, Chennai",
-            city=user.city or "Chennai",
-            pincode=user.pincode or "600017",
+            lat=user.lat or 13.1147,
+            lng=user.lng or 80.1048,
+            address=user.address or "Avadi Main Road, Avadi",
+            city=user.city or "Avadi",
+            pincode=user.pincode or "600054",
             landmark=user.landmark
         ),
         createdAt=user.created_at
@@ -77,11 +77,11 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
         password_hash=hash_password(payload.password or "password123"),
         role=payload.role,
         avatar=payload.avatar or "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
-        lat=payload.lat or 13.0418,
-        lng=payload.lng or 80.2341,
-        address=payload.address or "Usman Road, T. Nagar, Chennai",
-        city=payload.city or "Chennai",
-        pincode=payload.pincode or "600017",
+        lat=payload.lat or 13.1147,
+        lng=payload.lng or 80.1048,
+        address=payload.address or "Avadi Main Road, Avadi",
+        city=payload.city or "Avadi",
+        pincode=payload.pincode or "600054",
         landmark=payload.landmark,
         created_at=datetime.utcnow().isoformat()
     )
@@ -115,7 +115,7 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
             service_radius_km=8.0,
             base_charge_per_hour=payload.baseChargePerHour or 350.0,
             cooperative_id=payload.cooperativeId or "coop-1",
-            cooperative_name="Trichy Local Service Cooperative Society",
+            cooperative_name="Avadi Skilled Workers Cooperative Society",
             verifications={
                 "identity": "pending",
                 "skill": "pending",
@@ -201,11 +201,11 @@ def verify_otp(payload: OtpVerifyRequest, db: Session = Depends(get_db)):
             role=payload.role or "customer",
             password_hash="password123",
             avatar="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
-            address="Usman Road, T. Nagar, Chennai",
-            city="Chennai",
-            pincode="600017",
-            lat=13.0418,
-            lng=80.2341,
+            address="Avadi Main Road, Avadi",
+            city="Avadi",
+            pincode="600054",
+            lat=13.1147,
+            lng=80.1048,
             created_at=datetime.utcnow().isoformat()
         )
         db.add(user)

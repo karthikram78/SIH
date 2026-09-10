@@ -70,6 +70,11 @@ export default function RegisterPage() {
         password: form.password,
         role,
         area: form.area,
+        address: 'Avadi Main Road, Avadi',
+        city: 'Avadi',
+        pincode: '600054',
+        lat: 13.1147,
+        lng: 80.1048,
         skill: role === 'worker' ? form.skill : undefined,
       };
       await registerUser(payload);

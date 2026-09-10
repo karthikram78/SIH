@@ -23,6 +23,7 @@ interface NearbyWorkersMapProps {
   workers: Worker[];
   selectedWorkerId?: string;
   onSelectWorker: (worker: Worker) => void;
+  onLocationChange?: (location: LocationCoordinates) => void;
 }
 
 declare global {
@@ -37,6 +38,7 @@ export const NearbyWorkersMap: React.FC<NearbyWorkersMapProps> = ({
   workers,
   selectedWorkerId,
   onSelectWorker,
+  onLocationChange,
 }) => {
   const [viewProvider, setViewProvider] = useState<'leaflet' | 'georadar' | 'google'>('leaflet');
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -61,9 +63,14 @@ export const NearbyWorkersMap: React.FC<NearbyWorkersMapProps> = ({
   const googleUserMarkerRef = useRef<any>(null);
   const googleInfoWindowRef = useRef<any>(null);
 
-  // Service coverage is intentionally limited to Avadi.
+  // Avadi-area landmarks used for quick map navigation and dispatch coverage.
   const quickFlyLocalities = [
-    { name: 'Avadi',            lat: 13.1147, lng: 80.1048 },
+    { name: 'Avadi', lat: 13.1147, lng: 80.1048 },
+    { name: 'Avadi Railway Station', lat: 13.1193, lng: 80.1017 },
+    { name: 'Pattabiram', lat: 13.1234, lng: 80.0648 },
+    { name: 'Thiruninravur', lat: 13.1236, lng: 80.0272 },
+    { name: 'Hindu College', lat: 13.1158, lng: 80.1392 },
+    { name: 'Paruthipattu', lat: 13.0875, lng: 80.1075 },
   ];
 
   // Initialize API Key from localStorage or env
@@ -152,6 +159,28 @@ export const NearbyWorkersMap: React.FC<NearbyWorkersMapProps> = ({
         </div>
       `);
       leafletUserMarkerRef.current = userMarker;
+
+      // Add map click listener to set user location
+      map.on('click', (e: any) => {
+        const { lat, lng } = e.latlng;
+        onLocationChange?.({
+          ...userLocation,
+          lat: Number(lat.toFixed(5)),
+          lng: Number(lng.toFixed(5)),
+          address: `Map Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+        });
+        
+        if (leafletUserMarkerRef.current) {
+          leafletUserMarkerRef.current.setLatLng([lat, lng]);
+          leafletUserMarkerRef.current.getPopup().setContent(`
+            <div style="font-family: inherit; font-size: 12px; color: #0f172a; padding: 2px;">
+              <div style="font-weight: 800; color: #0284c7; margin-bottom: 2px;">📍 Your Location (Citizen)</div>
+              <div style="font-weight: 600;">Map Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Selected via map tap</div>
+            </div>
+          `);
+        }
+      });
 
       // Worker Markers
       leafletMarkersRef.current = [];
@@ -271,6 +300,12 @@ export const NearbyWorkersMap: React.FC<NearbyWorkersMapProps> = ({
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const newPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          onLocationChange?.({
+            ...userLocation,
+            lat: Number(newPos.lat.toFixed(5)),
+            lng: Number(newPos.lng.toFixed(5)),
+            address: `Live GPS: ${newPos.lat.toFixed(4)}, ${newPos.lng.toFixed(4)}`,
+          });
           if (leafletInstanceRef.current && viewProvider === 'leaflet') {
             leafletInstanceRef.current.flyTo([newPos.lat, newPos.lng], 15);
             if (leafletUserMarkerRef.current) {
@@ -290,6 +325,27 @@ export const NearbyWorkersMap: React.FC<NearbyWorkersMapProps> = ({
       handleFlyToLocality(userLocation.lat, userLocation.lng);
     }
   };
+
+  useEffect(() => {
+    if (!selectedWorkerId) return;
+
+    const selectedWorkerData = workers.find((worker) => worker.id === selectedWorkerId);
+    if (!selectedWorkerData) return;
+
+    const target = {
+      lat: selectedWorkerData.location.lat,
+      lng: selectedWorkerData.location.lng,
+    };
+
+    if (viewProvider === 'leaflet' && leafletInstanceRef.current) {
+      leafletInstanceRef.current.flyTo([target.lat, target.lng], 14, { duration: 1.2 });
+    }
+
+    if (viewProvider === 'google' && googleMapInstanceRef.current) {
+      googleMapInstanceRef.current.panTo(target);
+      googleMapInstanceRef.current.setZoom(14);
+    }
+  }, [selectedWorkerId, viewProvider, workers]);
 
   // --------------------------------------------------------------------------
   // GOOGLE MAPS OPTIONAL PROVIDER
@@ -326,6 +382,22 @@ export const NearbyWorkersMap: React.FC<NearbyWorkersMapProps> = ({
           strokeColor: '#ffffff',
           strokeWeight: 3,
         },
+      });
+
+      // Add map click listener to set user location
+      map.addListener('click', (e: any) => {
+        const lat = e.latLng.lat();
+        const lng = e.latLng.lng();
+        onLocationChange?.({
+          ...userLocation,
+          lat: Number(lat.toFixed(5)),
+          lng: Number(lng.toFixed(5)),
+          address: `Map Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+        });
+        
+        if (googleUserMarkerRef.current) {
+          googleUserMarkerRef.current.setPosition({ lat, lng });
+        }
       });
 
       // Render Workers
@@ -509,7 +581,7 @@ export const NearbyWorkersMap: React.FC<NearbyWorkersMapProps> = ({
                 <ZoomOut className="w-4 h-4" />
               </button>
               <button
-                onClick={() => handleFlyToLocality(13.0418, 80.2341)}
+                onClick={() => handleFlyToLocality(13.1147, 80.1048)}
                 className="p-2 rounded-lg text-slate-200 hover:text-white hover:bg-slate-800 transition"
                 title="Reset to Avadi"
               >
@@ -696,8 +768,11 @@ export const NearbyWorkersMap: React.FC<NearbyWorkersMapProps> = ({
         </div>
 
         {selectedWorker && (
-          <div className="pointer-events-auto bg-saffron-600 text-white font-bold px-3.5 py-1.5 rounded-xl shadow-xl flex items-center gap-2">
-            <span>Selected: <strong>{selectedWorker.name}</strong> ({selectedWorker.primaryCategory} • ₹{selectedWorker.baseChargePerHour}/hr)</span>
+          <div className="pointer-events-auto bg-saffron-600 text-white font-bold px-3.5 py-1.5 rounded-xl shadow-xl flex items-center gap-2 max-w-[48%] truncate">
+            <span className="truncate">
+              Selected: <strong>{selectedWorker.name}</strong> ({selectedWorker.primaryCategory} • ₹{selectedWorker.baseChargePerHour}/hr)
+            </span>
+            <span className="hidden sm:inline text-saffron-100">• {selectedWorker.location.address}</span>
           </div>
         )}
       </div>

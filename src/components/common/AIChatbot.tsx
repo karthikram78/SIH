@@ -3,8 +3,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { getChatbotResponse, ChatMessage } from '@/lib/aiClassifier';
 import { sanitizeInput } from '@/lib/security';
+import { chatWithAssistantApi } from '@/lib/api';
+import { analyzeServiceRequestApi } from '@/lib/api';
+import { useApp } from '@/context/AppContext';
 
 export const AIChatbot: React.FC = () => {
+  const { workers, userLocation, currentUser, createServiceRequest } = useApp();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -15,6 +19,7 @@ export const AIChatbot: React.FC = () => {
   ]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
+  const [backendOnline, setBackendOnline] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -25,8 +30,8 @@ export const AIChatbot: React.FC = () => {
     }
   }, [open, messages]);
 
-  const sendMessage = () => {
-    const text = sanitizeInput(input.trim());
+  const sendMessage = async (messageOverride?: string) => {
+    const text = sanitizeInput((messageOverride || input).trim());
     if (!text) return;
 
     const userMsg: ChatMessage = { role: 'user', text, timestamp: new Date() };
@@ -34,13 +39,43 @@ export const AIChatbot: React.FC = () => {
     setInput('');
     setTyping(true);
 
-    // Simulate response delay
-    setTimeout(() => {
-      const response = getChatbotResponse(text);
-      const botMsg: ChatMessage = { role: 'assistant', text: response, timestamp: new Date() };
-      setMessages((m) => [...m, botMsg]);
+    try {
+      const response = await chatWithAssistantApi({
+        message: text,
+        history: [...messages, userMsg].slice(-8).map(({ role, text: messageText }) => ({ role, text: messageText })),
+      });
+      setBackendOnline(true);
+      const shouldBook = /\b(book|hire|request|dispatch|send)\b/i.test(text) || response.intent === 'emergency';
+      if (shouldBook) {
+        const analysis = await analyzeServiceRequestApi(text);
+        const worker = workers.find((candidate) =>
+          candidate.availability === 'available' && candidate.primaryCategory.toLowerCase() === analysis.detectedService.toLowerCase()
+        ) || workers.find((candidate) => candidate.availability === 'available');
+        const booked = await createServiceRequest({
+          category: analysis.detectedService,
+          skill: analysis.requiredSkill,
+          problem: analysis.problem,
+          urgency: analysis.urgency,
+          isEmergency: analysis.urgency === 'emergency',
+          workerId: worker?.id,
+          amount: undefined,
+          matchScore: worker ? 94 : 80,
+          matchReasons: ['AI service classification', 'Available Avadi worker', 'Cooperative dispatch'],
+        });
+        setMessages((m) => [...m, {
+          role: 'assistant',
+          text: `${response.reply}\n\nBooking confirmed for ${booked.serviceCategory} at ${booked.location.address}. ${worker ? `${worker.name} has been notified.` : 'We are finding the nearest available worker.'}\n\nEstimated amount: ₹${booked.amount}. Open My Bookings to track it.`,
+          timestamp: new Date(),
+        }]);
+      } else {
+        setMessages((m) => [...m, { role: 'assistant', text: response.reply, timestamp: new Date() }]);
+      }
+    } catch {
+      setBackendOnline(false);
+      setMessages((m) => [...m, { role: 'assistant', text: getChatbotResponse(text), timestamp: new Date() }]);
+    } finally {
       setTyping(false);
-    }, 700 + Math.random() * 500);
+    }
   };
 
   const handleKey = (e: React.KeyboardEvent) => {
@@ -85,7 +120,7 @@ export const AIChatbot: React.FC = () => {
               <p className="text-white font-black text-sm">Avadi Connect AI</p>
               <p className="text-amber-100 text-xs font-medium">Always here to help • நம்ம சேவை</p>
             </div>
-            <div className="ml-auto w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <div className={`ml-auto w-2 h-2 rounded-full animate-pulse ${backendOnline ? 'bg-emerald-400' : 'bg-slate-300'}`} title={backendOnline ? 'Connected to assistant service' : 'Offline assistant mode'} />
           </div>
 
           {/* Messages */}
@@ -125,7 +160,7 @@ export const AIChatbot: React.FC = () => {
             {['Book service', 'Track worker', 'Fees?', 'Emergency'].map((q) => (
               <button
                 key={q}
-                onClick={() => { setInput(q); setTimeout(sendMessage, 50); }}
+                onClick={() => { setInput(''); void sendMessage(q); }}
                 className="shrink-0 px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold rounded-full hover:bg-amber-100 transition"
               >
                 {q}
@@ -146,7 +181,7 @@ export const AIChatbot: React.FC = () => {
               maxLength={200}
             />
             <button
-              onClick={sendMessage}
+              onClick={() => void sendMessage()}
               disabled={!input.trim() || typing}
               className="w-10 h-10 rounded-xl bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center text-lg disabled:opacity-40 transition"
             >

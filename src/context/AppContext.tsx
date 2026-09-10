@@ -59,6 +59,7 @@ interface AppContextType {
   logout: () => void;
   currentWorker: Worker;
   setCurrentWorkerId: (id: string) => void;
+  updateWorkerProfile: (workerId: string, updates: Partial<Worker>) => Promise<void>;
   workers: Worker[];
   cooperatives: Cooperative[];
   serviceCategories: ServiceCategory[];
@@ -373,7 +374,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     matchReasons?: string[];
   }): Promise<ServiceRequest> => {
     // Try FastAPI Backend
-    if (isBackendConnected) {
+    {
       try {
         const createdReq = await createServiceRequestApi({
           category,
@@ -436,6 +437,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       amount,
       paymentBreakdown: calculatePaymentSplit(amount),
       paymentStatus: 'pending',
+      paymentUpiId: 'avadi.connect@upi',
+      paymentQrData: `upi://pay?pa=avadi.connect@upi&pn=Avadi%20Connect&am=${amount.toFixed(2)}&cu=INR`,
       verificationOtp: otp,
     };
 
@@ -468,7 +471,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   ) => {
     // Try FastAPI Backend
-    if (isBackendConnected) {
+    {
       try {
         const updated = await updateJobStatusApi(requestId, status, extra);
         setServiceRequests((prev) => prev.map((r) => (r.id === requestId ? updated : r)));
@@ -500,6 +503,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           amount: finalAmount,
           paymentBreakdown: calculatePaymentSplit(finalAmount),
         };
+
+        if (extra?.amount && ['completed', 'paid'].includes(status)) {
+          updatedReq.paymentUpiId = 'avadi.connect@upi';
+          updatedReq.paymentQrData = `upi://pay?pa=avadi.connect@upi&pn=Avadi%20Connect&am=${finalAmount.toFixed(2)}&cu=INR`;
+        }
 
         if (status === 'accepted') updatedReq.acceptedAt = now;
         if (status === 'arrived') updatedReq.arrivedAt = now;
@@ -651,6 +659,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const updateWorkerProfile = async (workerId: string, updates: Partial<Worker>) => {
+    setWorkers((prev) =>
+      prev.map((worker) => (worker.id === workerId ? { ...worker, ...updates } : worker))
+    );
+  };
+
   const verifyDocument = async (
     workerId: string,
     docId: string,
@@ -797,7 +811,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (identifier: string, password?: string, role?: UserRole) => {
     try {
-      if (isBackendConnected) {
+      {
         const res = await loginUserApi({ identifier, password, role });
         setCurrentUser(res.user);
         if (res.role) setCurrentRole(res.role as UserRole);
@@ -830,7 +844,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const registerUser = async (payload: any) => {
     try {
-      if (isBackendConnected) {
+      {
         const res = await registerUserApi(payload);
         setCurrentUser(res.user);
         if (res.role) setCurrentRole(res.role as UserRole);
@@ -889,6 +903,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         logout,
         currentWorker,
         setCurrentWorkerId,
+        updateWorkerProfile,
         workers,
         cooperatives,
         serviceCategories,

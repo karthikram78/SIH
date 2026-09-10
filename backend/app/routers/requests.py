@@ -5,7 +5,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import ServiceRequest, Worker, Cooperative, Notification
+from app.models import ServiceRequest, Worker, Cooperative, Notification, User, ServiceCategory
 from app.schemas import (
     ServiceRequestResponse,
     ServiceRequestCreate,
@@ -14,6 +14,7 @@ from app.schemas import (
     PaymentBreakdown
 )
 from app.services.fee_calculator import calculate_payment_split
+from app.config import settings
 from app.routers.workers import worker_model_to_schema
 
 router = APIRouter(prefix="/requests", tags=["Service Requests & Jobs"])
@@ -67,6 +68,8 @@ def request_model_to_schema(req: ServiceRequest) -> ServiceRequestResponse:
         paymentBreakdown=breakdown,
         paymentMethod=req.payment_method,
         paymentStatus=req.payment_status,
+        paymentUpiId=req.payment_upi_id,
+        paymentQrData=req.payment_qr_data,
         rating=req.rating,
         reviewText=req.review_text,
         verificationOtp=req.verification_otp
@@ -108,15 +111,36 @@ def create_service_request(
 
     # Default location to customer's home coordinates if not provided
     loc = payload.location or LocationCoordinates(
-        lat=13.0418,
-        lng=80.2341,
-        address="Flat 302, Cauvery Heights, Usman Road, T. Nagar",
-        city="Chennai",
-        pincode="600017"
+        lat=13.1147,
+        lng=80.1048,
+        address="Avadi Main Road, Avadi",
+        city="Avadi",
+        pincode="600054"
     )
 
-    amount = payload.amount or 450.0
+    customer_id = payload.customerId or "cust-101"
+    customer = db.query(User).filter(User.id == customer_id).first()
+    if not customer:
+        customer = User(
+            id=customer_id,
+            name=payload.customerName or "Avadi Customer",
+            mobile=payload.customerMobile or "+91 98421 77312",
+            email=f"{customer_id}@avadi-connect.local",
+            role="customer",
+            address=loc.address,
+            city=loc.city,
+            pincode=loc.pincode,
+            lat=loc.lat,
+            lng=loc.lng,
+            landmark=loc.landmark,
+        )
+        db.add(customer)
+
+    category_price = db.query(ServiceCategory.base_price).filter(ServiceCategory.name.ilike(payload.category)).scalar()
+    amount = payload.amount if payload.amount is not None and payload.amount > 0 else (category_price or 450.0)
     split = calculate_payment_split(amount)
+    upi_id = settings.PAYMENT_UPI_ID
+    payment_qr_data = f"upi://pay?pa={upi_id}&pn=Avadi%20Connect&am={split.totalAmount:.2f}&cu=INR"
 
     assigned_worker = None
     if payload.workerId:
@@ -124,7 +148,7 @@ def create_service_request(
 
     new_req = ServiceRequest(
         id=req_id,
-        customer_id=payload.customerId or "cust-101",
+        customer_id=customer_id,
         customer_name=payload.customerName or "Priya Sharma",
         customer_mobile=payload.customerMobile or "+91 98421 77312",
         service_category=payload.category,
@@ -151,6 +175,8 @@ def create_service_request(
         cooperative_percentage=split.cooperativePercentage,
         platform_percentage=split.platformPercentage,
         payment_status="pending",
+        payment_upi_id=upi_id,
+        payment_qr_data=payment_qr_data,
         verification_otp=otp
     )
     db.add(new_req)
@@ -200,7 +226,20 @@ def update_job_status(
         req.arrived_at = now
     elif new_status == "in_progress":
         req.started_at = now
-    elif new_status == "paid":
+    if payload.amount is not None and new_status in {"completed", "paid"}:
+        if payload.amount < 100 or payload.amount > 50000:
+            raise HTTPException(status_code=400, detail="Service amount must be between ₹100 and ₹50,000.")
+        split = calculate_payment_split(payload.amount)
+        req.amount = split.totalAmount
+        req.worker_earnings = split.workerEarnings
+        req.cooperative_contribution = split.cooperativeContribution
+        req.platform_fee = split.platformFee
+        req.worker_percentage = split.workerPercentage
+        req.cooperative_percentage = split.cooperativePercentage
+        req.platform_percentage = split.platformPercentage
+        req.payment_upi_id = settings.PAYMENT_UPI_ID
+        req.payment_qr_data = f"upi://pay?pa={settings.PAYMENT_UPI_ID}&pn=Avadi%20Connect&am={split.totalAmount:.2f}&cu=INR"
+    if new_status == "paid":
         req.paid_at = now
         req.payment_status = "completed"
         if payload.paymentMethod:
@@ -212,6 +251,8 @@ def update_job_status(
         req.worker_earnings = split.workerEarnings
         req.cooperative_contribution = split.cooperativeContribution
         req.platform_fee = split.platformFee
+        req.payment_upi_id = settings.PAYMENT_UPI_ID
+        req.payment_qr_data = f"upi://pay?pa={settings.PAYMENT_UPI_ID}&pn=Avadi%20Connect&am={split.totalAmount:.2f}&cu=INR"
 
         # Update worker completed jobs count
         if req.assigned_worker_id:

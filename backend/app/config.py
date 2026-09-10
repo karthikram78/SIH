@@ -22,6 +22,7 @@ class Settings:
     WORKER_SHARE_PERCENT: int = int(os.getenv("WORKER_SHARE_PERCENT", "85"))
     COOPERATIVE_SHARE_PERCENT: int = int(os.getenv("COOPERATIVE_SHARE_PERCENT", "10"))
     PLATFORM_SHARE_PERCENT: int = int(os.getenv("PLATFORM_SHARE_PERCENT", "5"))
+    PAYMENT_UPI_ID: str = os.getenv("PAYMENT_UPI_ID", "avadi.connect@upi")
 
     # Optional Gemini AI API Key
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")

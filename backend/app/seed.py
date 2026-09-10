@@ -29,12 +29,12 @@ def seed_database(db: Session):
         email="priya.sharma@example.com",
         role="customer",
         avatar="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
-        lat=13.0418,
-        lng=80.2341,
-        address="Flat 302, Cauvery Heights, Usman Road, T. Nagar",
-        city="Chennai",
-        pincode="600017",
-        landmark="Opposite Apollo Speciality Hospital",
+        lat=13.1147,
+        lng=80.1048,
+        address="Avadi Main Road, Avadi",
+        city="Avadi",
+        pincode="600054",
+        landmark="Avadi Service Center",
         created_at="2024-01-15T10:00:00Z"
     )
     db.add(customer)
@@ -700,6 +700,11 @@ def seed_database(db: Session):
     ]
 
     for w_data in workers_seed:
+        w_data["lat"] = 13.1147
+        w_data["lng"] = 80.1048
+        w_data["address"] = "Avadi Main Road, Avadi"
+        w_data["city"] = "Avadi"
+        w_data["pincode"] = "600054"
         docs = w_data.pop("docs", [])
         worker = Worker(**w_data)
         db.add(worker)

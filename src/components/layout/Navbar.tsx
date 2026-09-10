@@ -60,12 +60,52 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenEmergency, onOpenWeightsCo
 
   const locations = [
     {
-      name: 'Avadi Service Area',
+      name: 'Avadi Service Center',
       lat: 13.1147,
       lng: 80.1048,
       address: 'Avadi Main Road, Avadi',
       city: 'Avadi',
       pincode: '600054',
+    },
+    {
+      name: 'Avadi Railway Station',
+      lat: 13.1193,
+      lng: 80.1017,
+      address: 'Avadi Railway Station Road',
+      city: 'Avadi',
+      pincode: '600054',
+    },
+    {
+      name: 'Pattabiram',
+      lat: 13.1234,
+      lng: 80.0648,
+      address: 'Pattabiram Main Road',
+      city: 'Pattabiram',
+      pincode: '600072',
+    },
+    {
+      name: 'Thiruninravur',
+      lat: 13.1236,
+      lng: 80.0272,
+      address: 'Thiruninravur Railway Road',
+      city: 'Thiruninravur',
+      pincode: '602024',
+    },
+    {
+      name: 'Hindu College',
+      lat: 13.1158,
+      lng: 80.1392,
+      address: 'Hindu College Road',
+      city: 'Avadi',
+      pincode: '600054',
+    },
+    {
+      name: 'Paruthipattu',
+      lat: 13.0875,
+      lng: 80.1075,
+      address: 'Paruthipattu Lake Road',
+      city: 'Avadi',
+      pincode: '600071',
     },
   ];
 

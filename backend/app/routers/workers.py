@@ -164,7 +164,7 @@ def register_worker(payload: WorkerRegisterRequest, db: Session = Depends(get_db
         service_radius_km=payload.serviceRadiusKm,
         base_charge_per_hour=payload.baseChargePerHour,
         cooperative_id=payload.cooperativeId or "coop-1",
-        cooperative_name=payload.cooperativeName or "Trichy Local Service Cooperative Society",
+        cooperative_name=payload.cooperativeName or "Avadi Skilled Workers Cooperative Society",
         shop=shop_dict,
         verifications={
             "identity": "pending",
