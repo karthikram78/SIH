@@ -258,3 +258,82 @@ export async function resetDemoDataApi(): Promise<any> {
     method: 'POST',
   });
 }
+
+// ================= AUTHENTICATION API =================
+export async function loginUserApi(payload: {
+  identifier: string;
+  password?: string;
+  role?: string;
+}): Promise<{ user: any; token: string; role: string; message: string }> {
+  return request<{ user: any; token: string; role: string; message: string }>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function registerUserApi(payload: {
+  name: string;
+  mobile: string;
+  email: string;
+  password?: string;
+  role?: string;
+  address?: string;
+  city?: string;
+  pincode?: string;
+  lat?: number;
+  lng?: number;
+  primaryCategory?: string;
+  skills?: string[];
+  experienceYears?: number;
+  baseChargePerHour?: number;
+  cooperativeId?: string;
+}): Promise<{ user: any; token: string; role: string; message: string }> {
+  return request<{ user: any; token: string; role: string; message: string }>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function sendOtpApi(mobile: string): Promise<{ success: boolean; demoOtp: string; message: string }> {
+  return request<{ success: boolean; demoOtp: string; message: string }>('/auth/send-otp', {
+    method: 'POST',
+    body: JSON.stringify({ mobile }),
+  });
+}
+
+export async function verifyOtpApi(payload: {
+  mobile: string;
+  otp: string;
+  role?: string;
+}): Promise<{ user: any; token: string; role: string; message: string }> {
+  return request<{ user: any; token: string; role: string; message: string }>('/auth/verify-otp', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+// ================= DOCUMENT & FILE UPLOAD API =================
+export async function uploadDocumentApi(file: File): Promise<{
+  url: string;
+  filename: string;
+  size: number;
+  mimeType: string;
+  message: string;
+}> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const url = `${API_BASE_URL}/upload/document`;
+  const response = await fetch(url, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Upload failed [${response.status}]: ${err}`);
+  }
+
+  return response.json();
+}
+

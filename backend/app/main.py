@@ -1,8 +1,10 @@
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.config import settings
-from app.database import Base, engine, SessionLocal
+from app.database import Base, engine, SessionLocal, ensure_db_migrations
 from app.seed import seed_database
 from app.routers import (
     auth,
@@ -14,13 +16,15 @@ from app.routers import (
     ai,
     reviews,
     notifications,
-    admin
+    admin,
+    upload
 )
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Ensure tables exist and seed default database if empty
     Base.metadata.create_all(bind=engine)
+    ensure_db_migrations()
     db = SessionLocal()
     try:
         seed_database(db)
@@ -56,6 +60,12 @@ app.include_router(ai.router, prefix=settings.API_PREFIX)
 app.include_router(reviews.router, prefix=settings.API_PREFIX)
 app.include_router(notifications.router, prefix=settings.API_PREFIX)
 app.include_router(admin.router, prefix=settings.API_PREFIX)
+app.include_router(upload.router, prefix=settings.API_PREFIX)
+
+# Mount uploaded files directory for public viewing (Aadhaar cards, certificates)
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
+os.makedirs(os.path.join(UPLOAD_DIR, "documents"), exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 @app.get("/")
 def root():

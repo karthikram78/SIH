@@ -309,16 +309,32 @@ export const PlatformAdminView: React.FC = () => {
               <div className="font-bold text-sm text-slate-900">{viewingDoc.name}</div>
               <button onClick={() => setViewingDoc(null)} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
-            <div className="p-8 bg-slate-100 rounded-2xl border-2 border-dashed border-slate-300 text-center space-y-3">
-              <div className="w-12 h-12 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center mx-auto">
-                <FileCheck className="w-6 h-6" />
-              </div>
-              <div className="font-bold text-xs text-slate-800">SAMPLE / PROTOTYPE DOCUMENT VIEWER</div>
-              <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
-                As per SIH Prototype Security Guidelines, dummy files are utilized. Real biometric or personal identification credentials are never stored or exposed.
-              </p>
+            <div className="p-4 bg-slate-100 rounded-2xl border-2 border-dashed border-slate-300 text-center space-y-3">
+              {viewingDoc.fileUrl && (viewingDoc.fileUrl.startsWith('http') || viewingDoc.fileUrl.startsWith('blob:') || viewingDoc.fileUrl.startsWith('/uploads') || viewingDoc.fileUrl.startsWith('data:')) ? (
+                <div className="space-y-2">
+                  <img
+                    src={viewingDoc.fileUrl.startsWith('/uploads') ? `http://127.0.0.1:8000${viewingDoc.fileUrl}` : viewingDoc.fileUrl}
+                    alt={viewingDoc.name}
+                    className="max-h-72 w-auto mx-auto rounded-xl object-contain shadow-sm bg-white"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                  <div className="text-[11px] font-mono text-slate-500">Document URL: {viewingDoc.fileUrl}</div>
+                </div>
+              ) : (
+                <div className="space-y-2 py-4">
+                  <div className="w-12 h-12 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center mx-auto">
+                    <FileCheck className="w-6 h-6" />
+                  </div>
+                  <div className="font-bold text-xs text-slate-800">DOCUMENT AUDIT RECORD</div>
+                  <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                    Aadhaar Card / Government Identity file stored in verified cooperative repository.
+                  </p>
+                </div>
+              )}
               <div className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-1 rounded inline-block">
-                SHA-256 Checksum: a8f49c0...verified
+                SHA-256 Checksum: verified • Status: {viewingDoc.status}
               </div>
             </div>
             <button

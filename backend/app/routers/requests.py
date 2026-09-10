@@ -108,11 +108,11 @@ def create_service_request(
 
     # Default location to customer's home coordinates if not provided
     loc = payload.location or LocationCoordinates(
-        lat=10.8271,
-        lng=78.6890,
-        address="Flat 302, Cauvery Heights, Thillai Nagar 7th Cross",
-        city="Tiruchirappalli",
-        pincode="620018"
+        lat=13.0418,
+        lng=80.2341,
+        address="Flat 302, Cauvery Heights, Usman Road, T. Nagar",
+        city="Chennai",
+        pincode="600017"
     )
 
     amount = payload.amount or 450.0

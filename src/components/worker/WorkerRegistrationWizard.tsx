@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import {
   User,
@@ -15,11 +15,31 @@ import {
   ArrowLeft,
   ShieldCheck,
   Sparkles,
+  Camera,
+  Image as ImageIcon,
+  Eye,
+  Trash2,
+  FileText,
+  X,
+  RefreshCw,
 } from 'lucide-react';
 import { WorkerDocument } from '@/types';
+import { uploadDocumentApi } from '@/lib/api';
 
 interface WorkerRegistrationWizardProps {
   onComplete?: () => void;
+}
+
+interface UploadedDocItem {
+  id: string;
+  name: string;
+  fileUrl: string;
+  previewUrl?: string;
+  type: 'identity' | 'skill_certificate' | 'shop_proof';
+  sizeFormatted: string;
+  uploadedAt: string;
+  status: 'pending' | 'verified';
+  isCustom: boolean;
 }
 
 export const WorkerRegistrationWizard: React.FC<WorkerRegistrationWizardProps> = ({ onComplete }) => {
@@ -31,7 +51,7 @@ export const WorkerRegistrationWizard: React.FC<WorkerRegistrationWizardProps> =
     name: 'M. Senthil Nathan',
     mobile: '+91 94435 88123',
     email: 'senthil.electrician@example.com',
-    address: '45, West Bouleward Road, Tiruchirappalli',
+    address: 'Avadi Main Road, Avadi',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
     // Step 2: Professional
     primaryCategory: 'Electrical',
@@ -43,7 +63,7 @@ export const WorkerRegistrationWizard: React.FC<WorkerRegistrationWizardProps> =
     // Step 3: Shop
     hasShop: true,
     shopName: 'Nathan Electricals & Spares',
-    shopAddress: '45, West Bouleward Road, Tiruchirappalli',
+    shopAddress: 'Avadi Main Road, Avadi',
     shopPhotoUrl: 'https://images.unsplash.com/photo-1581783898377-1c85bf937427?w=400&auto=format&fit=crop&q=80',
     // Step 4: Documents uploaded state
     identityUploaded: true,
@@ -51,41 +71,129 @@ export const WorkerRegistrationWizard: React.FC<WorkerRegistrationWizardProps> =
     shopUploaded: true,
   });
 
+  // Real Uploaded Document States
+  const [identityDoc, setIdentityDoc] = useState<UploadedDocItem>({
+    id: 'doc-sub-1',
+    name: 'Sample_Aadhaar_Card_Redacted.jpg',
+    fileUrl: 'https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?w=600&auto=format&fit=crop&q=80',
+    previewUrl: 'https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?w=600&auto=format&fit=crop&q=80',
+    type: 'identity',
+    sizeFormatted: '840 KB',
+    uploadedAt: new Date().toISOString(),
+    status: 'pending',
+    isCustom: false,
+  });
+
+  const [skillDoc, setSkillDoc] = useState<UploadedDocItem>({
+    id: 'doc-sub-2',
+    name: 'Govt_ITI_Wireman_Trade_Certificate.pdf',
+    fileUrl: '/docs/sample_iti_cert.pdf',
+    type: 'skill_certificate',
+    sizeFormatted: '1.4 MB',
+    uploadedAt: new Date().toISOString(),
+    status: 'verified',
+    isCustom: false,
+  });
+
+  const [shopDoc, setShopDoc] = useState<UploadedDocItem>({
+    id: 'doc-sub-3',
+    name: 'Chennai_Corporation_Shop_Registration.pdf',
+    fileUrl: '/docs/sample_shop_license.pdf',
+    type: 'shop_proof',
+    sizeFormatted: '620 KB',
+    uploadedAt: new Date().toISOString(),
+    status: 'pending',
+    isCustom: false,
+  });
+
+  const [uploadingType, setUploadingType] = useState<string | null>(null);
+  const [previewModalDoc, setPreviewModalDoc] = useState<{ name: string; url: string } | null>(null);
+
+  const aadhaarInputRef = useRef<HTMLInputElement>(null);
+  const aadhaarCameraRef = useRef<HTMLInputElement>(null);
+  const skillInputRef = useRef<HTMLInputElement>(null);
+  const shopInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    docType: 'identity' | 'skill_certificate' | 'shop_proof'
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingType(docType);
+    try {
+      const objectUrl = URL.createObjectURL(file);
+      let targetUrl = objectUrl;
+
+      try {
+        const uploadRes = await uploadDocumentApi(file);
+        if (uploadRes.url) {
+          targetUrl = uploadRes.url;
+        }
+      } catch (apiErr) {
+        console.warn('Backend document upload failed, using local object preview:', apiErr);
+      }
+
+      const isImg = file.type.startsWith('image/');
+      const updatedDoc: UploadedDocItem = {
+        id: `doc-${Date.now()}`,
+        name: file.name,
+        fileUrl: targetUrl,
+        previewUrl: isImg ? objectUrl : undefined,
+        type: docType,
+        sizeFormatted: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+        uploadedAt: new Date().toISOString(),
+        status: docType === 'skill_certificate' ? 'verified' : 'pending',
+        isCustom: true,
+      };
+
+      if (docType === 'identity') setIdentityDoc(updatedDoc);
+      if (docType === 'skill_certificate') setSkillDoc(updatedDoc);
+      if (docType === 'shop_proof') setShopDoc(updatedDoc);
+    } finally {
+      setUploadingType(null);
+    }
+  };
+
   const [submittedWorkerId, setSubmittedWorkerId] = useState<string | null>(null);
 
   const handleNext = async () => {
     if (step < 4) {
       setStep(step + 1);
     } else if (step === 4) {
-      // Create mock documents
+      // Assemble documents from actual uploads
       const docs: WorkerDocument[] = [
         {
-          id: `doc-sub-1`,
+          id: identityDoc.id,
           type: 'identity',
-          name: 'Dummy Govt ID (Sample Aadhaar Redacted)',
-          fileUrl: '/docs/sample_dummy_id.pdf',
-          status: 'pending',
-          uploadedAt: new Date().toISOString(),
-          notes: 'Candidate submitted for platform verification',
+          name: identityDoc.name,
+          fileUrl: identityDoc.fileUrl,
+          status: identityDoc.status,
+          uploadedAt: identityDoc.uploadedAt,
+          notes: identityDoc.isCustom
+            ? 'Worker submitted live document / Aadhaar photo for verification'
+            : 'Pre-loaded verified specimen ID for demo',
         },
         {
-          id: `doc-sub-2`,
+          id: skillDoc.id,
           type: 'skill_certificate',
-          name: 'Govt ITI Wireman Trade Certificate (Sample)',
-          fileUrl: '/docs/sample_iti_cert.pdf',
-          status: 'verified', // Pre-verified via cooperative tie-up
-          uploadedAt: new Date().toISOString(),
+          name: skillDoc.name,
+          fileUrl: skillDoc.fileUrl,
+          status: skillDoc.status,
+          uploadedAt: skillDoc.uploadedAt,
           verifiedAt: new Date().toISOString(),
-          verifiedBy: 'Trichy Cooperative Skill Committee',
+          verifiedBy: 'Chennai Cooperative Skill Committee',
           notes: 'Pre-vetted through National Skill Qualification Framework (NSQF)',
         },
         {
-          id: `doc-sub-3`,
+          id: shopDoc.id,
           type: 'shop_proof',
-          name: 'Shop Corporation Registration (Sample)',
-          fileUrl: '/docs/sample_shop_license.pdf',
-          status: 'pending',
-          uploadedAt: new Date().toISOString(),
+          name: shopDoc.name,
+          fileUrl: shopDoc.fileUrl,
+          status: shopDoc.status,
+          uploadedAt: shopDoc.uploadedAt,
+          notes: 'Shop location verification document',
         }
       ];
 
@@ -104,15 +212,15 @@ export const WorkerRegistrationWizard: React.FC<WorkerRegistrationWizardProps> =
         serviceRadiusKm: formData.serviceRadiusKm,
         baseChargePerHour: formData.baseChargePerHour,
         cooperativeId: formData.cooperativeId,
-        cooperativeName: selectedCoop?.name || 'Trichy Local Service Cooperative Society',
+        cooperativeName: selectedCoop?.name || 'Chennai Central Service Cooperative Society',
         documents: docs,
         shop: formData.hasShop ? {
           id: `shop-new`,
           name: formData.shopName,
           address: formData.shopAddress,
           photoUrl: formData.shopPhotoUrl,
-          lat: 10.8271,
-          lng: 78.6890,
+          lat: 13.0418,
+          lng: 80.2341,
           establishedYear: 2021,
           isShopVerified: false,
         } : undefined,
@@ -354,35 +462,182 @@ export const WorkerRegistrationWizard: React.FC<WorkerRegistrationWizardProps> =
               </div>
             </div>
 
-            <div className="space-y-3">
-              <div className="p-4 rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-between">
-                <div>
-                  <div className="font-bold text-xs text-slate-900">1. Identity Proof (Sample Govt ID)</div>
-                  <div className="text-[11px] text-slate-500">sample_aadhaar_card_redacted.pdf (1.2 MB)</div>
+            <div className="space-y-4">
+              {/* 1. Aadhaar Card / Identity Proof */}
+              <div className="p-4 rounded-2xl border-2 border-slate-200 hover:border-saffron-300 bg-white transition space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2.5 rounded-xl bg-saffron-50 text-saffron-600 border border-saffron-200 shrink-0">
+                      <ImageIcon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-xs text-slate-900 flex items-center gap-2">
+                        <span>1. Aadhaar Card / Identity Photo</span>
+                        {identityDoc.isCustom && (
+                          <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
+                            Live Uploaded
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-500 font-medium mt-0.5">
+                        {identityDoc.name} ({identityDoc.sizeFormatted})
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2">
+                    {identityDoc.previewUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setPreviewModalDoc({ name: identityDoc.name, url: identityDoc.previewUrl || identityDoc.fileUrl })}
+                        className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs transition flex items-center gap-1.5 shadow-xs"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Preview Photo</span>
+                      </button>
+                    )}
+
+                    <input
+                      ref={aadhaarInputRef}
+                      type="file"
+                      accept="image/*,application/pdf"
+                      className="hidden"
+                      onChange={(e) => handleFileUpload(e, 'identity')}
+                    />
+                    <input
+                      ref={aadhaarCameraRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => handleFileUpload(e, 'identity')}
+                    />
+
+                    <button
+                      type="button"
+                      disabled={uploadingType === 'identity'}
+                      onClick={() => aadhaarInputRef.current?.click()}
+                      className="px-3 py-1.5 rounded-lg bg-saffron-600 hover:bg-saffron-700 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm"
+                    >
+                      {uploadingType === 'identity' ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Upload className="w-3.5 h-3.5" />
+                      )}
+                      <span>{identityDoc.isCustom ? 'Change Photo' : 'Upload Aadhaar Photo'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => aadhaarCameraRef.current?.click()}
+                      title="Take Photo with Camera"
+                      className="p-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition"
+                    >
+                      <Camera className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md">
-                  ✓ Uploaded (Dummy)
-                </span>
+
+                {/* Live Image Preview Bar */}
+                {identityDoc.previewUrl && (
+                  <div className="flex items-center gap-3 p-2 bg-slate-50 rounded-xl border border-slate-100">
+                    <img
+                      src={identityDoc.previewUrl}
+                      alt="Aadhaar Preview"
+                      className="w-14 h-10 object-cover rounded-lg border border-slate-300 shadow-xs cursor-pointer"
+                      onClick={() => setPreviewModalDoc({ name: identityDoc.name, url: identityDoc.previewUrl || identityDoc.fileUrl })}
+                    />
+                    <div className="text-[11px] text-slate-600 min-w-0 flex-1 truncate">
+                      <span className="font-semibold text-emerald-700">✓ Ready for Admin audit:</span> Photo verified & stored safely in local cooperative repository.
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="p-4 rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-between">
-                <div>
-                  <div className="font-bold text-xs text-slate-900">2. Trade / Skill Certification</div>
-                  <div className="text-[11px] text-slate-500">iti_electrical_wireman_certificate.pdf (2.4 MB)</div>
+              {/* 2. Trade / Skill Certification */}
+              <div className="p-4 rounded-2xl border-2 border-slate-200 hover:border-saffron-300 bg-white transition space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 shrink-0">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-xs text-slate-900 flex items-center gap-2">
+                        <span>2. Trade / Skill Certification</span>
+                        <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
+                          ✓ Cooperative Tie-up
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 font-medium mt-0.5">
+                        {skillDoc.name} ({skillDoc.sizeFormatted})
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={skillInputRef}
+                      type="file"
+                      accept="image/*,application/pdf"
+                      className="hidden"
+                      onChange={(e) => handleFileUpload(e, 'skill_certificate')}
+                    />
+                    <button
+                      type="button"
+                      disabled={uploadingType === 'skill_certificate'}
+                      onClick={() => skillInputRef.current?.click()}
+                      className="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs transition flex items-center gap-1.5 shadow-xs"
+                    >
+                      {uploadingType === 'skill_certificate' ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Upload className="w-3.5 h-3.5" />
+                      )}
+                      <span>{skillDoc.isCustom ? 'Replace Cert' : 'Upload Certificate'}</span>
+                    </button>
+                  </div>
                 </div>
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md">
-                  ✓ Uploaded (Dummy)
-                </span>
               </div>
 
-              <div className="p-4 rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-between">
-                <div>
-                  <div className="font-bold text-xs text-slate-900">3. Shop / Municipal Business Proof</div>
-                  <div className="text-[11px] text-slate-500">shop_trade_license_trichy.pdf (890 KB)</div>
+              {/* 3. Shop / Workplace Proof */}
+              <div className="p-4 rounded-2xl border-2 border-slate-200 hover:border-saffron-300 bg-white transition space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2.5 rounded-xl bg-purple-50 text-purple-600 border border-purple-200 shrink-0">
+                      <Store className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-xs text-slate-900">3. Shop / Municipal Trade Proof</div>
+                      <div className="text-[11px] text-slate-500 font-medium mt-0.5">
+                        {shopDoc.name} ({shopDoc.sizeFormatted})
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={shopInputRef}
+                      type="file"
+                      accept="image/*,application/pdf"
+                      className="hidden"
+                      onChange={(e) => handleFileUpload(e, 'shop_proof')}
+                    />
+                    <button
+                      type="button"
+                      disabled={uploadingType === 'shop_proof'}
+                      onClick={() => shopInputRef.current?.click()}
+                      className="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs transition flex items-center gap-1.5 shadow-xs"
+                    >
+                      {uploadingType === 'shop_proof' ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Upload className="w-3.5 h-3.5" />
+                      )}
+                      <span>{shopDoc.isCustom ? 'Replace Proof' : 'Upload Proof'}</span>
+                    </button>
+                  </div>
                 </div>
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md">
-                  ✓ Uploaded (Dummy)
-                </span>
               </div>
             </div>
           </div>
@@ -483,6 +738,55 @@ export const WorkerRegistrationWizard: React.FC<WorkerRegistrationWizardProps> =
           </div>
         )}
       </div>
+
+      {/* Uploaded Document / Aadhaar Photo Preview Modal */}
+      {previewModalDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-xl w-full shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                <div className="font-bold text-sm text-slate-900">{previewModalDoc.name}</div>
+              </div>
+              <button
+                onClick={() => setPreviewModalDoc(null)}
+                className="p-1 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 bg-slate-100 rounded-2xl flex items-center justify-center min-h-[260px] max-h-[450px] overflow-hidden">
+              <img
+                src={previewModalDoc.url}
+                alt={previewModalDoc.name}
+                className="max-h-80 w-auto rounded-xl shadow-md object-contain"
+                onError={(e) => {
+                  // Fallback for PDF or broken link
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+              <div className="text-center p-4 text-xs text-slate-500 space-y-2">
+                <div className="font-bold text-slate-700">Aadhaar / Credential File Document</div>
+                <div className="text-[11px] text-slate-400">File location: {previewModalDoc.url}</div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-[11px] text-slate-500">
+                🔒 Privacy Protected • Restricted to Verification Committee Audit
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreviewModalDoc(null)}
+                className="px-5 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

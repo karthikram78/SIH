@@ -1,1 +1,40 @@
-node_modules
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js build output
+.next/
+out/
+build/
+dist/
+
+# Python virtual environment & caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/.venv/
+.venv/
+env/
+venv/
+ENV/
+*.db
+*.sqlite3
+
+# Uploads & local caches
+backend/uploads/
+.cache/
+
+# Environment variables
+.env
+.env*.local
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+Thumbs.db

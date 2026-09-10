@@ -3,6 +3,9 @@
 @tailwind utilities;
 
 :root {
+  --brand-green: #087f5b;
+  --brand-blue: #1261a0;
+  --brand-orange: #f28c18;
   --foreground-rgb: 15, 23, 42;
   --background-start-rgb: 248, 250, 252;
   --background-end-rgb: 255, 255, 255;
@@ -18,6 +21,36 @@ body {
     rgb(var(--background-start-rgb));
   min-height: 100vh;
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  overflow-x: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@media (max-width: 640px) {
+  body {
+    font-size: 15px;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    min-height: 44px;
+  }
+}
+
+.safe-area-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.brand-logo {
+  display: block;
+  object-fit: contain;
 }
 
 /* Custom scrollbar */

@@ -21,8 +21,10 @@ import { WorkerRegistrationWizard } from '@/components/worker/WorkerRegistration
 import { CooperativeDashboardView } from '@/components/cooperative/CooperativeDashboardView';
 import { PlatformAdminView } from '@/components/admin/PlatformAdminView';
 import { Footer } from '@/components/layout/Footer';
+import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
 import { rankWorkers } from '@/lib/matchingEngine';
 import { Worker, AIServiceAnalysis } from '@/types';
+import Link from 'next/link';
 import {
   MapPin,
   Sparkles,
@@ -33,6 +35,11 @@ import {
   Users,
   Building,
   CheckCircle2,
+  LogIn,
+  ArrowRight,
+  UserCheck,
+  KeyRound,
+  ShieldCheck,
 } from 'lucide-react';
 
 export default function Home() {
@@ -46,6 +53,8 @@ export default function Home() {
     reviews,
     createServiceRequest,
     setCurrentRole,
+    isAuthenticated,
+    login,
   } = useApp();
 
   // Modals and Drawers
@@ -138,7 +147,63 @@ export default function Home() {
               onOpenEmergency={() => setShowEmergencyModal(true)}
             />
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 -mt-10 relative z-20">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 -mt-10 relative z-20">
+              {/* Authentication Gateway Card (Shown prominently when not signed in) */}
+              {!isAuthenticated ? (
+                <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-950 rounded-3xl p-6 shadow-2xl border border-slate-700 text-white animate-in fade-in slide-in-from-top-3">
+                  <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                    <div className="space-y-1.5 max-w-xl">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-saffron-500/20 text-saffron-300 border border-saffron-500/30 text-xs font-bold">
+                        <Sparkles className="w-3.5 h-3.5 text-saffron-400" />
+                        <span>Chennai Cooperative Gateway • App Access</span>
+                      </div>
+                      <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                        Cross into Your Dispatch & Booking Portal
+                      </h3>
+                      <p className="text-xs text-slate-300 leading-relaxed">
+                        Sign in or register to unlock verified local workers in Chennai, live GPS map dispatch, cooperative price protection, and real-time job tracking.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                      <Link
+                        href="/login"
+                        className="flex-1 sm:flex-none px-5 py-3 rounded-xl bg-gradient-to-r from-saffron-600 to-amber-600 hover:from-saffron-700 hover:to-amber-700 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition"
+                      >
+                        <LogIn className="w-4 h-4" />
+                        <span>Sign In</span>
+                      </Link>
+
+                      <Link
+                        href="/register"
+                        className="flex-1 sm:flex-none px-5 py-3 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition"
+                      >
+                        <span>Register</span>
+                        <ArrowRight className="w-4 h-4 text-saffron-600" />
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => login('priya.sharma@example.com', 'password123', 'customer')}
+                        className="w-full sm:w-auto px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition"
+                      >
+                        <span>⚡ 1-Click Demo Login</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-emerald-950/40 backdrop-blur-md rounded-2xl px-5 py-3 border border-emerald-500/30 flex items-center justify-between flex-wrap gap-2 text-xs text-emerald-300">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span>Welcome inside your app, <strong>{currentUser.name}</strong>! Session active for <strong>Chennai Network</strong>.</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                    <span>Pin: {userLocation.address}</span>
+                  </div>
+                </div>
+              )}
+
               {/* Active Job Tracker (if customer has an active booking) */}
               {activeCustomerRequest && (
                 <div id="active-job-anchor" className="animate-in fade-in slide-in-from-top-4">
@@ -165,7 +230,7 @@ export default function Home() {
                     </p>
                   </div>
                   <div className="text-xs text-slate-500 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-xs">
-                    Cooperative Network: <strong>Trichy Hub (248 Members)</strong>
+                    Cooperative Network: <strong>Chennai Central Hub (248 Members)</strong>
                   </div>
                 </div>
 
@@ -441,6 +506,9 @@ export default function Home() {
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
       />
+
+      {/* Native App-like Mobile Bottom Navigation */}
+      <MobileBottomNav onOpenEmergency={() => setShowEmergencyModal(true)} />
     </div>
   );
 }

@@ -62,8 +62,9 @@ export const WorkerDashboardView: React.FC = () => {
   }, 220);
 
   const handleVerifyOtp = (req: ServiceRequest) => {
-    if (otpInput === req.verificationOtp || otpInput === '7412' || !otpInput) {
-      updateJobStatus(req.id, 'in_progress');
+    const validOtp = req.verificationOtp || '7412';
+    if (otpInput.trim() === validOtp || otpInput.trim() === '7412') {
+      updateJobStatus(req.id, 'in_progress', { verificationOtp: otpInput.trim() });
       setOtpInput('');
       setOtpError(false);
     } else {

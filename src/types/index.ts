@@ -106,6 +106,7 @@ export interface Worker {
     mobile: VerificationStatus;
   };
   isOverallVerified: boolean;
+  isVerified?: boolean;
   joinedDate: string;
   responseTimeMinutes: number;
 }
@@ -134,12 +135,14 @@ export interface AIServiceAnalysis {
   requiredSkill: string;
   estimatedCostRange: string;
   recommendedKeywords: string[];
+  reasoning?: string;
 }
 
 export interface SmartMatchScore {
   workerId: string;
   worker: Worker;
   overallScore: number; // 0 to 100
+  matchScore?: number;
   distanceKm: number;
   breakdown: {
     skillMatch: number; // 0 to 30
@@ -177,14 +180,17 @@ export interface ServiceRequest {
   customerName: string;
   customerMobile: string;
   serviceCategory: string;
+  category?: string;
   requiredSkill: string;
   problemDescription: string;
+  problem?: string;
   urgency: UrgencyLevel;
   isEmergency: boolean;
   location: LocationCoordinates;
   status: JobStatus;
   assignedWorkerId?: string;
   assignedWorker?: Worker;
+  workerName?: string;
   matchScore?: number;
   matchReasons?: string[];
   createdAt: string;
@@ -209,10 +215,13 @@ export interface RatingReview {
   workerId: string;
   customerId: string;
   customerName: string;
+  workerName?: string;
   rating: number; // 1 to 5
   reviewText: string;
+  comment?: string;
   createdAt: string;
   serviceCategory: string;
+  category?: string;
 }
 
 export interface NotificationItem {
@@ -246,3 +255,19 @@ export interface DemandForecastItem {
   affectedZones: string[];
   recommendedAction: string;
 }
+
+export interface AuthResponse {
+  user: User;
+  token: string;
+  role: UserRole;
+  message: string;
+}
+
+export interface FileUploadResult {
+  url: string;
+  filename: string;
+  size: number;
+  mimeType: string;
+  message: string;
+}
+

@@ -144,7 +144,7 @@ export const EmergencyModal: React.FC<EmergencyModalProps> = ({
             </span>
             <div>
               <span className="text-xs font-black uppercase tracking-widest text-amber-200">
-                Namma Sevai SOS Dispatch
+                Avadi Connect SOS Dispatch
               </span>
               <h3 className="text-2xl font-black">🚨 Need Help Now — Emergency Protocol</h3>
             </div>

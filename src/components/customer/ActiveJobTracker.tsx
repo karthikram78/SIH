@@ -16,8 +16,12 @@ import {
   AlertCircle,
   QrCode,
   DollarSign,
+  Radio,
+  Navigation,
+  Compass,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { FeedbackWidget } from '@/components/customer/FeedbackWidget';
 
 interface ActiveJobTrackerProps {
   request: ServiceRequest;
@@ -190,30 +194,89 @@ export const ActiveJobTracker: React.FC<ActiveJobTrackerProps> = ({ request }) =
           </div>
         )}
 
-        {/* State: Accepted / Navigating */}
+        {/* State: Accepted / Navigating (Live Location Tracking Widget) */}
         {(request.status === 'accepted' || request.status === 'navigating') && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 p-4 rounded-2xl bg-blue-50/70 border border-blue-200">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg shrink-0">
-                ETA
-              </div>
-              <div>
-                <h4 className="font-bold text-slate-900 text-sm">
-                  {request.assignedWorker?.name} is on the way!
-                </h4>
-                <p className="text-xs text-slate-600 mt-0.5">
-                  Simulated ETA: <strong>~7 minutes</strong> • Preparing service tools.
-                </p>
-              </div>
-            </div>
+          <div className="space-y-4">
+            <div className="p-5 rounded-3xl bg-gradient-to-br from-blue-900 via-slate-900 to-slate-900 text-white shadow-lg space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400">
+                    <Radio className="w-5 h-5 animate-ping" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black uppercase tracking-wider text-blue-300">Live GPS Radar Active</span>
+                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    </div>
+                    <h4 className="font-extrabold text-base text-white">
+                      {request.assignedWorker?.name || 'Worker'} is En Route to Your Doorstep
+                    </h4>
+                  </div>
+                </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <button
-                onClick={() => setCurrentRole('worker')}
-                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition"
-              >
-                Control in Worker View
-              </button>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10 text-xs font-bold text-amber-300">
+                    ETA: ~6 Mins
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-xs font-bold text-emerald-300">
+                    1.2 km away
+                  </span>
+                </div>
+              </div>
+
+              {/* Live Route Radar Track Visual */}
+              <div className="relative bg-white/5 border border-white/10 rounded-2xl p-4 overflow-hidden">
+                <div className="flex items-center justify-between relative z-10 text-xs font-bold mb-3">
+                  <div className="flex items-center gap-2 text-blue-300">
+                    <Navigation className="w-4 h-4 text-blue-400" />
+                    <span>Worker Origin</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-emerald-300">
+                    <MapPin className="w-4 h-4 text-emerald-400" />
+                    <span>{request.location?.address || 'Customer Doorstep'}</span>
+                  </div>
+                </div>
+
+                {/* Animated Route Line */}
+                <div className="relative w-full h-3 bg-white/10 rounded-full overflow-hidden my-2">
+                  <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 via-amber-400 to-emerald-400 w-3/4 rounded-full transition-all duration-1000 animate-pulse" />
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] text-slate-300 pt-1">
+                  <span>Speed: <strong>24 km/h</strong></span>
+                  <span>Vehicle: <strong>Two-Wheeler Service Kit</strong></span>
+                  <span>Telemetry: <strong>High Precision GPS</strong></span>
+                </div>
+              </div>
+
+              {/* Quick Action Buttons */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                <div className="flex items-center gap-2">
+                  {request.assignedWorker?.mobile && (
+                    <a
+                      href={`tel:${request.assignedWorker.mobile}`}
+                      className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs transition"
+                    >
+                      <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Call Worker</span>
+                    </a>
+                  )}
+                  <button
+                    onClick={() => updateJobStatus(request.id, 'arrived')}
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition shadow-sm"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Simulate Doorstep Arrival</span>
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setCurrentRole('worker')}
+                  className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition border border-white/10"
+                >
+                  Switch to Worker Portal →
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -413,6 +476,21 @@ export const ActiveJobTracker: React.FC<ActiveJobTrackerProps> = ({ request }) =
                 </span>
               </div>
             ) : (
+              <FeedbackWidget
+                jobId={request.id}
+                workerName={request.assignedWorker?.name || 'your Avadi Connect worker'}
+                workerRole={request.assignedWorker?.primaryCategory || request.requiredSkill}
+                onSubmit={(feedbackRating, comment) => {
+                  submitReview(request.id, feedbackRating, comment || 'Prompt service, highly skilled and cooperative.');
+                  setRating(feedbackRating);
+                  setReviewText(comment);
+                  setReviewSubmitted(true);
+                }}
+              />
+            )}
+
+            {!reviewSubmitted && !request.rating && (
+              <div className="hidden">
               <form
                 onSubmit={handleSubmitRating}
                 className="p-5 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-3"
@@ -456,6 +534,7 @@ export const ActiveJobTracker: React.FC<ActiveJobTrackerProps> = ({ request }) =
                   Submit Cooperative Review
                 </button>
               </form>
+              </div>
             )}
           </div>
         )}

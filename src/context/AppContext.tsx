@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
   UserRole,
   User,
@@ -43,12 +43,20 @@ import {
   registerWorkerApi,
   markNotificationReadApi,
   resetDemoDataApi,
+  loginUserApi,
+  registerUserApi,
+  verifyOtpApi,
 } from '@/lib/api';
 
 interface AppContextType {
   currentRole: UserRole;
   setCurrentRole: (role: UserRole) => void;
   currentUser: User;
+  setCurrentUser: (user: User) => void;
+  isAuthenticated: boolean;
+  login: (identifier: string, password?: string, role?: UserRole) => Promise<{ success: boolean; message: string }>;
+  registerUser: (payload: any) => Promise<{ success: boolean; message: string }>;
+  logout: () => void;
   currentWorker: Worker;
   setCurrentWorkerId: (id: string) => void;
   workers: Worker[];
@@ -61,6 +69,12 @@ interface AppContextType {
   setWeights: (weights: MatchWeights) => void;
   userLocation: LocationCoordinates;
   setUserLocation: (loc: LocationCoordinates) => void;
+  
+  // Live GPS Tracking & Dynamic Location
+  isLiveLocationActive: boolean;
+  startLiveTracking: () => void;
+  stopLiveTracking: () => void;
+  updateUserCoordinates: (lat: number, lng: number, address?: string) => void;
   
   // Backend Connection State
   isBackendConnected: boolean;
@@ -99,11 +113,131 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 const STORAGE_KEY = 'kaushalsetu_state_v1';
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [currentRole, setCurrentRole] = useState<UserRole>('customer');
-  const [currentUser] = useState<User>(CURRENT_CUSTOMER);
+  const [currentRole, setCurrentRoleState] = useState<UserRole>('customer');
+  const [currentUser, setCurrentUser] = useState<User>(CURRENT_CUSTOMER);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [currentWorkerId, setCurrentWorkerId] = useState<string>('worker-1');
   const [userLocation, setUserLocation] = useState<LocationCoordinates>(CURRENT_CUSTOMER.location);
   const [weights, setWeights] = useState<MatchWeights>(DEFAULT_WEIGHTS);
+
+  // Live Location & GPS Tracking
+  const [isLiveLocationActive, setIsLiveLocationActive] = useState<boolean>(false);
+  const watchIdRef = useRef<number | null>(null);
+  const simulationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const updateUserCoordinates = useCallback((lat: number, lng: number, address?: string) => {
+    setUserLocation((prev) => ({
+      ...prev,
+      lat: Number(lat.toFixed(5)),
+      lng: Number(lng.toFixed(5)),
+      address: address || `Map Pin: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+    }));
+  }, []);
+
+  const stopLiveTracking = useCallback(() => {
+    if (watchIdRef.current !== null && typeof window !== 'undefined' && 'geolocation' in navigator) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    if (simulationIntervalRef.current !== null) {
+      clearInterval(simulationIntervalRef.current);
+      simulationIntervalRef.current = null;
+    }
+    setIsLiveLocationActive(false);
+  }, []);
+
+  const startFallbackSimulation = useCallback(() => {
+    if (simulationIntervalRef.current !== null) return;
+    simulationIntervalRef.current = setInterval(() => {
+      setUserLocation((prev) => {
+        const driftLat = (Math.random() - 0.5) * 0.0003;
+        const driftLng = (Math.random() - 0.5) * 0.0003;
+        const newLat = Number((prev.lat + driftLat).toFixed(5));
+        const newLng = Number((prev.lng + driftLng).toFixed(5));
+        return {
+          ...prev,
+          lat: newLat,
+          lng: newLng,
+          address: `Live GPS: ${newLat.toFixed(4)}° N, ${newLng.toFixed(4)}° E`,
+        };
+      });
+    }, 3500);
+  }, []);
+
+  const startLiveTracking = useCallback(() => {
+    setIsLiveLocationActive(true);
+
+    if (typeof window === 'undefined' || !('geolocation' in navigator)) {
+      startFallbackSimulation();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = Number(pos.coords.latitude.toFixed(5));
+        const lng = Number(pos.coords.longitude.toFixed(5));
+        setUserLocation((prev) => ({
+          ...prev,
+          lat,
+          lng,
+          address: `Live GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+        }));
+      },
+      (err) => {
+        console.warn('Geolocation initial query notice (activating live simulated telemetry):', err);
+        startFallbackSimulation();
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+    );
+
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const lat = Number(pos.coords.latitude.toFixed(5));
+        const lng = Number(pos.coords.longitude.toFixed(5));
+        setUserLocation((prev) => ({
+          ...prev,
+          lat,
+          lng,
+          address: `Live GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+        }));
+      },
+      (err) => {
+        console.warn('Live location watch notice (activating live simulated telemetry):', err);
+        startFallbackSimulation();
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 2000 }
+    );
+  }, [startFallbackSimulation]);
+
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null && typeof window !== 'undefined' && 'geolocation' in navigator) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+      if (simulationIntervalRef.current !== null) {
+        clearInterval(simulationIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Strict Role Guard: Logged-in Customer cannot access Worker portal, and Worker cannot access Customer portal
+  const setCurrentRole = useCallback((role: UserRole) => {
+    if (isAuthenticated) {
+      if (currentUser.role === 'customer' && role === 'worker') {
+        alert('Access Restricted: You are signed in as a Customer. Please sign out first to access the Worker portal.');
+        return;
+      }
+      if (currentUser.role === 'worker' && role === 'customer') {
+        alert('Access Restricted: You are signed in as a Worker. Please sign out first to access the Customer portal.');
+        return;
+      }
+    }
+    setCurrentRoleState(role);
+  }, [isAuthenticated, currentUser.role]);
 
   const [workers, setWorkers] = useState<Worker[]>(INITIAL_WORKERS);
   const [cooperatives, setCooperatives] = useState<Cooperative[]>(INITIAL_COOPERATIVES);
@@ -161,6 +295,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (parsed.reviews) setReviews(parsed.reviews);
         if (parsed.notifications) setNotifications(parsed.notifications);
         if (parsed.weights) setWeights(parsed.weights);
+      }
+
+      const savedAuth = localStorage.getItem('kaushalsetu_auth_v1');
+      if (savedAuth) {
+        const authData = JSON.parse(savedAuth);
+        if (authData.user) {
+          setCurrentUser(authData.user);
+          setIsAuthenticated(true);
+        }
+        if (authData.role) {
+          setCurrentRole(authData.role);
+        }
       }
     } catch {
       // ignore
@@ -598,7 +744,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       baseChargePerHour: data.baseChargePerHour || 350,
       cooperativeId: data.cooperativeId || 'coop-1',
       cooperativeName:
-        data.cooperativeName || 'Trichy Local Service Cooperative Society',
+        data.cooperativeName || 'Chennai Central Service Cooperative Society',
       documents: data.documents || [],
       verifications: {
         identity: 'pending',
@@ -649,12 +795,98 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCurrentWorkerId('worker-1');
   };
 
+  const login = async (identifier: string, password?: string, role?: UserRole) => {
+    try {
+      if (isBackendConnected) {
+        const res = await loginUserApi({ identifier, password, role });
+        setCurrentUser(res.user);
+        if (res.role) setCurrentRole(res.role as UserRole);
+        setIsAuthenticated(true);
+        localStorage.setItem('kaushalsetu_auth_v1', JSON.stringify({ user: res.user, role: res.role, token: res.token }));
+        return { success: true, message: res.message };
+      }
+    } catch (err: any) {
+      console.warn('Backend login failed, checking fallback:', err);
+    }
+
+    // Local persona lookup or creation
+    const targetRole = role || 'customer';
+    const fallbackUser: User = {
+      id: `user-${Date.now()}`,
+      name: identifier.includes('@') ? identifier.split('@')[0] : identifier,
+      mobile: '+91 98421 77312',
+      email: identifier.includes('@') ? identifier : `${identifier}@example.com`,
+      role: targetRole,
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+      location: userLocation,
+      createdAt: new Date().toISOString(),
+    };
+    setCurrentUser(fallbackUser);
+    setCurrentRole(targetRole);
+    setIsAuthenticated(true);
+    localStorage.setItem('kaushalsetu_auth_v1', JSON.stringify({ user: fallbackUser, role: targetRole, token: 'demo-token' }));
+    return { success: true, message: `Welcome back, ${fallbackUser.name}!` };
+  };
+
+  const registerUser = async (payload: any) => {
+    try {
+      if (isBackendConnected) {
+        const res = await registerUserApi(payload);
+        setCurrentUser(res.user);
+        if (res.role) setCurrentRole(res.role as UserRole);
+        setIsAuthenticated(true);
+        localStorage.setItem('kaushalsetu_auth_v1', JSON.stringify({ user: res.user, role: res.role, token: res.token }));
+        await refreshFromBackend();
+        return { success: true, message: res.message };
+      }
+    } catch (err: any) {
+      console.warn('Backend register failed, using local fallback:', err);
+    }
+
+    const targetRole = (payload.role as UserRole) || 'customer';
+    const newUser: User = {
+      id: `user-${Date.now()}`,
+      name: payload.name,
+      mobile: payload.mobile,
+      email: payload.email,
+      role: targetRole,
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+      location: {
+        lat: payload.lat || userLocation.lat,
+        lng: payload.lng || userLocation.lng,
+        address: payload.address || userLocation.address,
+        city: payload.city || userLocation.city,
+        pincode: payload.pincode || userLocation.pincode,
+      },
+      createdAt: new Date().toISOString(),
+    };
+
+    setCurrentUser(newUser);
+    setCurrentRole(targetRole);
+    setIsAuthenticated(true);
+    localStorage.setItem('kaushalsetu_auth_v1', JSON.stringify({ user: newUser, role: targetRole, token: 'demo-token' }));
+    return { success: true, message: 'Account registered successfully!' };
+  };
+
+  const logout = () => {
+    setIsAuthenticated(false);
+    setCurrentUser(CURRENT_CUSTOMER);
+    setCurrentRoleState('customer');
+    localStorage.removeItem('kaushalsetu_auth_v1');
+    stopLiveTracking();
+  };
+
   return (
     <AppContext.Provider
       value={{
         currentRole,
         setCurrentRole,
         currentUser,
+        setCurrentUser,
+        isAuthenticated,
+        login,
+        registerUser,
+        logout,
         currentWorker,
         setCurrentWorkerId,
         workers,
@@ -667,6 +899,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setWeights,
         userLocation,
         setUserLocation,
+        isLiveLocationActive,
+        startLiveTracking,
+        stopLiveTracking,
+        updateUserCoordinates,
         isBackendConnected,
         backendLoading,
         refreshFromBackend,

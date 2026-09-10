@@ -129,11 +129,11 @@ def register_worker(payload: WorkerRegisterRequest, db: Session = Depends(get_db
     user_id = f"user-w-{uuid.uuid4().hex[:6]}"
 
     loc = payload.location or LocationCoordinates(
-        lat=10.8290,
-        lng=78.6810,
-        address="Trichy Cooperative Shared Workbench",
-        city="Tiruchirappalli",
-        pincode="620003"
+        lat=13.0450,
+        lng=80.2310,
+        address="Chennai Central Cooperative Shared Workbench, T. Nagar",
+        city="Chennai",
+        pincode="600017"
     )
 
     shop_dict = None

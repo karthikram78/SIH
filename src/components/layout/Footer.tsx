@@ -11,12 +11,14 @@ export const Footer: React.FC = () => {
     <footer className="bg-slate-950 text-slate-400 text-xs border-t border-slate-800 pt-12 pb-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
         <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-saffron-600 flex items-center justify-center text-white font-black text-sm">
-              NS
-            </div>
+          <div className="flex items-center gap-3">
+            <img
+              src="/logo.png"
+              alt="Avadi Connect Logo"
+              className="h-10 w-auto object-contain rounded-md"
+            />
             <span className="font-extrabold text-white text-lg tracking-tight">
-              Namma <span className="text-saffron-500">Sevai</span>
+              Namma <span className="text-emerald-400">Sevai</span>
             </span>
           </div>
           <p className="text-slate-400 text-xs leading-relaxed">
@@ -72,7 +74,7 @@ export const Footer: React.FC = () => {
 
       <div className="max-w-7xl mx-auto pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px]">
         <div>
-          © 2024 Namma Sevai. Ministry of Cooperation Initiative. All rights reserved.
+          © 2024 Avadi Connect. Ministry of Cooperation Initiative. All rights reserved.
         </div>
         <div className="flex items-center gap-4 text-slate-500">
           <span>Prototype built for SIH Evaluation</span>

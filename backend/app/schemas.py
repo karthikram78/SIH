@@ -301,3 +301,51 @@ class PlatformMetricsResponse(BaseModel):
     workerNetDisbursement85Percent: float
     averageWorkerRating: float
     verifiedWorkersCount: int
+
+# Auth & Upload schemas
+class UserLoginRequest(BaseModel):
+    identifier: str  # email or mobile
+    password: Optional[str] = "password123"
+    role: Optional[str] = None
+
+class UserRegisterRequest(BaseModel):
+    name: str
+    mobile: str
+    email: str
+    password: Optional[str] = "password123"
+    role: str = "customer"  # customer, worker, cooperative_admin, platform_admin
+    avatar: Optional[str] = None
+    address: Optional[str] = "Usman Road, T. Nagar, Chennai"
+    city: Optional[str] = "Chennai"
+    pincode: Optional[str] = "600017"
+    lat: Optional[float] = 13.0418
+    lng: Optional[float] = 80.2341
+    landmark: Optional[str] = None
+    # Optional worker fields if registering as worker
+    primaryCategory: Optional[str] = None
+    skills: Optional[List[str]] = None
+    experienceYears: Optional[int] = 1
+    baseChargePerHour: Optional[float] = 350.0
+    cooperativeId: Optional[str] = "coop-1"
+
+class UserAuthResponse(BaseModel):
+    user: UserResponse
+    token: str = "mock-jwt-token-sih-2024"
+    role: str
+    message: str = "Authentication successful"
+
+class OtpRequest(BaseModel):
+    mobile: str
+
+class OtpVerifyRequest(BaseModel):
+    mobile: str
+    otp: str
+    role: Optional[str] = "customer"
+
+class FileUploadResponse(BaseModel):
+    url: str
+    filename: str
+    size: int
+    mimeType: str
+    message: str = "File uploaded successfully"
+

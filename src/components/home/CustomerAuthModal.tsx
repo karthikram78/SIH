@@ -26,15 +26,15 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
   onClose,
   initialMode = 'login',
 }) => {
-  const { setCurrentRole } = useApp();
+  const { setCurrentRole, login, registerUser } = useApp();
   const [mode, setMode] = useState<'login' | 'register' | 'otp' | 'forgot'>(initialMode);
   const [roleIntent, setRoleIntent] = useState<'customer' | 'worker'>('customer');
-  const [otpValue, setOtpValue] = useState(['', '', '', '']);
+  const [otpValue, setOtpValue] = useState(['1', '2', '3', '4']);
   const [formData, setFormData] = useState({
     name: 'Priya Sharma',
     mobile: '+91 98421 77312',
     email: 'priya.sharma@example.com',
-    address: 'Cauvery Heights, Thillai Nagar, Tiruchirappalli',
+    address: 'Avadi Main Road, Avadi',
     locationGranted: true,
   });
 
@@ -45,12 +45,22 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
     setMode('otp');
   };
 
-  const handleVerifyOtp = (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (roleIntent === 'worker') {
-      setCurrentRole('worker');
+    if (mode === 'register') {
+      await registerUser({
+        name: formData.name,
+        mobile: formData.mobile,
+        email: formData.email,
+        role: roleIntent,
+        address: formData.address,
+        city: 'Chennai',
+        pincode: '600017',
+        lat: 13.0418,
+        lng: 80.2341,
+      });
     } else {
-      setCurrentRole('customer');
+      await login(formData.mobile, 'password123', roleIntent);
     }
     onClose();
   };
@@ -79,7 +89,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
             </span>
             <div>
               <span className="text-[10px] font-bold uppercase tracking-widest text-amber-300">
-                Namma Sevai Access
+                Avadi Connect Access
               </span>
               <h3 className="text-xl font-black">
                 {mode === 'login' && 'Welcome Back'}

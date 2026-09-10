@@ -35,7 +35,7 @@ export const EmpoweringWorkersSection: React.FC<EmpoweringWorkersSectionProps> =
           </h3>
 
           <p className="text-sm text-slate-300 leading-relaxed">
-            Local plumbers, electricians, mechanics, and artisans have historically suffered from predatory commissions, lack of social security, and informal exploitation. Namma Sevai changes this by partnering directly with local registered cooperative societies.
+            Local plumbers, electricians, mechanics, and artisans have historically suffered from predatory commissions, lack of social security, and informal exploitation. Avadi Connect changes this by partnering directly with local registered cooperative societies.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 text-xs">
@@ -119,7 +119,7 @@ export const EmpoweringWorkersSection: React.FC<EmpoweringWorkersSectionProps> =
           </div>
 
           <div className="p-4 rounded-2xl bg-coop-600/20 border border-coop-500/30 text-xs text-emerald-300">
-            &quot;Namma Sevai brings the digital revolution to ground-level cooperative federations across India.&quot;
+            &quot;Avadi Connect brings the digital revolution to ground-level cooperative federations across India.&quot;
           </div>
         </div>
       </div>

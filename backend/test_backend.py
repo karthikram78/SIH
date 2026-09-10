@@ -2,7 +2,7 @@ import sys
 import unittest
 from starlette.testclient import TestClient
 from app.main import app
-from app.database import Base, engine, SessionLocal
+from app.database import Base, engine, SessionLocal, ensure_db_migrations
 from app.seed import seed_database
 from app.models import Worker, ServiceRequest, Cooperative
 
@@ -10,6 +10,7 @@ class TestNammaSevaiBackend(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         Base.metadata.create_all(bind=engine)
+        ensure_db_migrations()
         db = SessionLocal()
         try:
             seed_database(db)
@@ -220,5 +221,51 @@ class TestNammaSevaiBackend(unittest.TestCase):
         self.assertGreater(metrics["cooperativeWelfarePool10Percent"], 0)
         self.assertGreater(metrics["workerNetDisbursement85Percent"], 0)
 
+    def test_11_auth_register_login(self):
+        # Test register
+        reg_payload = {
+            "name": "Karthik Ram",
+            "mobile": "+91 98765 43210",
+            "email": "karthik.ram@example.com",
+            "password": "mypassword123",
+            "role": "customer",
+            "city": "Tiruchirappalli",
+            "address": "Thillai Nagar, Trichy"
+        }
+        res = self.client.post("/api/auth/register", json=reg_payload)
+        self.assertIn(res.status_code, [200, 201])
+        data = res.json()
+        self.assertEqual(data["user"]["email"], "karthik.ram@example.com")
+        self.assertIn("token", data)
+
+        # Test login
+        login_payload = {
+            "identifier": "karthik.ram@example.com",
+            "password": "mypassword123"
+        }
+        log_res = self.client.post("/api/auth/login", json=login_payload)
+        self.assertEqual(log_res.status_code, 200)
+        self.assertEqual(log_res.json()["user"]["name"], "Karthik Ram")
+
+        # Test OTP flow
+        otp_send = self.client.post("/api/auth/send-otp", json={"mobile": "+91 98765 43210"})
+        self.assertEqual(otp_send.status_code, 200)
+        self.assertTrue(otp_send.json()["success"])
+
+        otp_ver = self.client.post("/api/auth/verify-otp", json={"mobile": "+91 98765 43210", "otp": "1234"})
+        self.assertEqual(otp_ver.status_code, 200)
+        self.assertIn("token", otp_ver.json())
+
+    def test_12_upload_document(self):
+        import io
+        fake_file = io.BytesIO(b"dummy image bytes for aadhaar card photo")
+        files = {"file": ("test_aadhaar.jpg", fake_file, "image/jpeg")}
+        res = self.client.post("/api/upload/document", files=files)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn("/uploads/documents/", data["url"])
+        self.assertEqual(data["filename"], "test_aadhaar.jpg")
+
 if __name__ == "__main__":
     unittest.main()
+

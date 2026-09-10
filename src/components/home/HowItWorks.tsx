@@ -3,90 +3,98 @@
 import React from 'react';
 import {
   FileText,
+  MapPin,
   Sparkles,
-  UserCheck,
-  Wrench,
+  ShieldCheck,
+  CheckCircle2,
   CreditCard,
+  Star,
   ArrowRight,
 } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 export const HowItWorks: React.FC = () => {
+  const { t } = useLanguage();
+
   const steps = [
     {
       num: 1,
-      title: '1. Request a Service',
-      desc: 'Describe your issue in plain words or pick from categorized trades. Our AI pinpoints the exact skill needed.',
-      icon: <FileText className="w-6 h-6 text-saffron-600" />,
-      tag: 'Natural Language AI',
+      title: 'Request Service',
+      desc: 'Describe your issue in plain words or select a category with our smart AI assistant.',
+      icon: <FileText className="w-5 h-5 text-amber-600" />,
     },
     {
       num: 2,
-      title: '2. Smart Matching',
-      desc: 'Our weighted algorithm ranks workers by skill relevance, proximity, duty availability, rating, and cooperative verification.',
-      icon: <Sparkles className="w-6 h-6 text-amber-600" />,
-      tag: 'Transparent Scoring',
+      title: 'Location Detection',
+      desc: 'GPS pinpoints your location to find nearby artisans in your neighborhood.',
+      icon: <MapPin className="w-5 h-5 text-emerald-600" />,
     },
     {
       num: 3,
-      title: '3. Choose Verified Worker',
-      desc: 'Inspect background profiles, trade qualifications, customer reviews, and cooperative badges without privacy exposure.',
-      icon: <UserCheck className="w-6 h-6 text-emerald-600" />,
-      tag: 'Cooperative Vetted',
+      title: 'Smart Matching',
+      desc: 'Ranked by skill, proximity, rating, and verified cooperative credentials.',
+      icon: <Sparkles className="w-5 h-5 text-blue-600" />,
     },
     {
       num: 4,
-      title: '4. Get the Work Done',
-      desc: 'Track arrival in real time. Validate safety using 4-digit OTP. Worker executes repair using standardized quality tools.',
-      icon: <Wrench className="w-6 h-6 text-blue-600" />,
-      tag: 'Secure OTP Handshake',
+      title: 'Verified Worker',
+      desc: 'Only cooperative-backed, 4-point verified workers arrive at your door.',
+      icon: <ShieldCheck className="w-5 h-5 text-purple-600" />,
     },
     {
       num: 5,
-      title: '5. Rate & Pay',
-      desc: 'Enjoy transparent pricing where 85% goes directly to the worker and 10% funds their cooperative welfare benefits.',
-      icon: <CreditCard className="w-6 h-6 text-purple-600" />,
-      tag: '85/10/5 Fair Payout',
+      title: 'Job Completion',
+      desc: 'Worker finishes task with strict transparent hourly or fixed pricing.',
+      icon: <CheckCircle2 className="w-5 h-5 text-teal-600" />,
+    },
+    {
+      num: 6,
+      title: 'Payment',
+      desc: 'Simulated payment: 85% to worker, 10% to coop welfare fund, 5% platform fee.',
+      icon: <CreditCard className="w-5 h-5 text-indigo-600" />,
+    },
+    {
+      num: 7,
+      title: 'Rating',
+      desc: 'Leave genuine feedback to empower honest community tradespeople.',
+      icon: <Star className="w-5 h-5 text-rose-600" />,
     },
   ];
 
   return (
     <div className="bg-slate-50 rounded-3xl p-8 md:p-12 border border-slate-200">
       <div className="text-center max-w-2xl mx-auto mb-10">
-        <span className="text-xs font-bold uppercase tracking-widest text-saffron-600">
-          Seamless Experience
+        <span className="text-xs font-bold uppercase tracking-widest text-amber-600">
+          Community Trust Flow
         </span>
         <h3 className="text-2xl md:text-3xl font-black text-slate-900 mt-1">
-          How Namma Sevai Works
+          How Avadi Connect Works
         </h3>
         <p className="text-xs sm:text-sm text-slate-600 mt-2">
-          From your first request to final transparent settlement in 5 simple, community-backed steps.
+          From your first service request to final rating in 7 seamless, transparent steps.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 relative">
-        {steps.map((st, idx) => (
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        {steps.map((st) => (
           <div
             key={st.num}
-            className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between relative group hover:shadow-md transition"
+            className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between group hover:shadow-md transition"
           >
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 group-hover:scale-110 transition-transform">
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 group-hover:scale-110 transition-transform">
                   {st.icon}
                 </div>
-                <span className="text-2xl font-black text-slate-200">
+                <span className="text-xs font-black text-slate-300">
                   0{st.num}
                 </span>
               </div>
 
-              <span className="text-[10px] font-bold uppercase tracking-wider text-saffron-700 bg-saffron-50 px-2 py-0.5 rounded border border-saffron-200 inline-block mb-1.5">
-                {st.tag}
-              </span>
-
-              <h4 className="font-extrabold text-sm text-slate-900 mb-1">
+              <h4 className="font-extrabold text-xs text-slate-900 mb-1">
                 {st.title}
               </h4>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <p className="text-[11px] text-slate-500 leading-relaxed">
                 {st.desc}
               </p>
             </div>
