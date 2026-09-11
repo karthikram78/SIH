@@ -1,11 +1,13 @@
 import uuid
-import hashlib
-from datetime import datetime
+import secrets
+from datetime import datetime, timedelta
 from typing import Optional
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import User, Worker
+from app.config import settings
+from app.models import OtpChallenge, User, Worker
 from app.schemas import (
     UserResponse,
     LocationCoordinates,
@@ -15,22 +17,9 @@ from app.schemas import (
     OtpRequest,
     OtpVerifyRequest
 )
+from app.security import create_access_token, get_current_user, hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["Authentication & Users"])
-
-PASSWORD_SALT = "kaushalsetu_sec_v1_"
-
-def hash_password(password: str) -> str:
-    """Cryptographically hash password using salted SHA-256."""
-    return hashlib.sha256((PASSWORD_SALT + password).encode("utf-8")).hexdigest()
-
-def verify_password(plain_password: str, stored_hash: Optional[str]) -> bool:
-    """Verify input password against stored hash with backward compatibility for demo passwords."""
-    if not stored_hash:
-        return True
-    if stored_hash == "password123":
-        return plain_password == "password123"
-    return hash_password(plain_password) == stored_hash or plain_password == stored_hash
 
 def user_to_response(user: User) -> UserResponse:
     return UserResponse(
@@ -62,7 +51,7 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
         # If user already registered, return friendly message
         return UserAuthResponse(
             user=user_to_response(existing),
-            token=f"jwt-token-{existing.id}",
+            token=create_access_token(existing),
             role=existing.role,
             message="Account already exists. Logged in successfully."
         )
@@ -133,7 +122,7 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
 
     return UserAuthResponse(
         user=user_to_response(new_user),
-        token=f"jwt-token-{new_user.id}",
+        token=create_access_token(new_user),
         role=new_user.role,
         message="Registration successful! Welcome to Namma Sevai."
     )
@@ -165,29 +154,64 @@ def login_user(payload: UserLoginRequest, db: Session = Depends(get_db)):
 
     return UserAuthResponse(
         user=user_to_response(user),
-        token=f"jwt-token-{user.id}",
+        token=create_access_token(user),
         role=user.role,
         message=f"Welcome back, {user.name}!"
     )
 
 @router.post("/send-otp")
-def send_otp(payload: OtpRequest):
-    # In production, this would trigger an SMS gateway (e.g. Fast2SMS / Twilio).
-    # For testing and hackathon demonstration, simulate successful dispatch with instant 1234 code.
-    return {
-        "success": True,
-        "mobile": payload.mobile,
-        "demoOtp": "1234",
-        "message": f"One-Time Password sent to {payload.mobile}. Demo OTP: 1234"
-    }
+def send_otp(payload: OtpRequest, db: Session = Depends(get_db)):
+    mobile = payload.mobile.strip()
+    use_demo_otp = settings.APP_ENV != "production" and (
+        not settings.MSG91_AUTH_KEY or not settings.MSG91_TEMPLATE_ID
+    )
+    if not use_demo_otp and (not settings.MSG91_AUTH_KEY or not settings.MSG91_TEMPLATE_ID):
+        raise HTTPException(status_code=503, detail="MSG91 OTP service is not configured")
+
+    otp = "1234" if use_demo_otp else f"{secrets.randbelow(900000) + 100000}"
+    challenge = OtpChallenge(
+        id=f"otp-{uuid.uuid4().hex[:12]}",
+        mobile=mobile,
+        code_hash=hash_password(otp),
+        expires_at=datetime.utcnow() + timedelta(seconds=settings.MSG91_OTP_EXPIRY_SECONDS),
+    )
+    db.query(OtpChallenge).filter(
+        OtpChallenge.mobile == mobile, OtpChallenge.consumed_at.is_(None)
+    ).update({OtpChallenge.consumed_at: datetime.utcnow()})
+    db.add(challenge)
+    if not use_demo_otp:
+        try:
+            response = httpx.post(
+                settings.MSG91_OTP_API_URL,
+                headers={"authkey": settings.MSG91_AUTH_KEY, "Content-Type": "application/json"},
+                json={"template_id": settings.MSG91_TEMPLATE_ID, "mobile": mobile, "otp": otp},
+                timeout=10.0,
+            )
+            response.raise_for_status()
+        except (httpx.HTTPError, ValueError) as exc:
+            db.rollback()
+            raise HTTPException(status_code=502, detail="Unable to send OTP through MSG91") from exc
+    db.commit()
+    response = {"success": True, "mobile": mobile, "message": "One-Time Password sent successfully"}
+    if use_demo_otp:
+        response["demoOtp"] = otp
+    return response
 
 @router.post("/verify-otp", response_model=UserAuthResponse)
 def verify_otp(payload: OtpVerifyRequest, db: Session = Depends(get_db)):
-    # Verify OTP (accept "1234" or any 4 digit matching code in demo)
-    if payload.otp != "1234" and len(payload.otp) != 4:
-        raise HTTPException(status_code=400, detail="Invalid OTP code. Use 1234 for verification.")
-
     clean_mobile = payload.mobile.strip()
+    challenge = db.query(OtpChallenge).filter(
+        OtpChallenge.mobile == clean_mobile,
+        OtpChallenge.consumed_at.is_(None),
+        OtpChallenge.expires_at > datetime.utcnow(),
+    ).order_by(OtpChallenge.created_at.desc()).first()
+    if not challenge or challenge.attempts >= 5:
+        raise HTTPException(status_code=400, detail="OTP expired or not requested")
+    challenge.attempts += 1
+    if not verify_password(payload.otp, challenge.code_hash):
+        db.commit()
+        raise HTTPException(status_code=400, detail="Invalid OTP code")
+    challenge.consumed_at = datetime.utcnow()
     user = db.query(User).filter(User.mobile.ilike(f"%{clean_mobile}%")).first()
     
     if not user:
@@ -199,7 +223,7 @@ def verify_otp(payload: OtpVerifyRequest, db: Session = Depends(get_db)):
             mobile=clean_mobile,
             email=f"user_{clean_mobile[-4:]}@nammasevai.in",
             role=payload.role or "customer",
-            password_hash="password123",
+            password_hash=hash_password(secrets.token_urlsafe(24)),
             avatar="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
             address="Avadi Main Road, Avadi",
             city="Avadi",
@@ -214,19 +238,13 @@ def verify_otp(payload: OtpVerifyRequest, db: Session = Depends(get_db)):
 
     return UserAuthResponse(
         user=user_to_response(user),
-        token=f"jwt-token-{user.id}",
+        token=create_access_token(user),
         role=user.role,
         message=f"Mobile number verified successfully! Welcome {user.name}."
     )
 
 @router.get("/me", response_model=UserResponse)
-def get_current_user(role: str = "customer", db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.role == role).first()
-    if not user:
-        user = db.query(User).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
+def get_me(user: User = Depends(get_current_user)):
     return user_to_response(user)
 
 @router.get("/users/{user_id}", response_model=UserResponse)

@@ -34,6 +34,8 @@ export interface User {
   avatar: string;
   location: LocationCoordinates;
   createdAt: string;
+  registeredAt?: string;
+  lastLoginAt?: string;
 }
 
 export interface Skill {
@@ -108,6 +110,8 @@ export interface Worker {
   isOverallVerified: boolean;
   isVerified?: boolean;
   joinedDate: string;
+  registeredAt?: string;
+  lastLoginAt?: string;
   responseTimeMinutes: number;
 }
 
@@ -272,4 +276,5 @@ export interface FileUploadResult {
   mimeType: string;
   message: string;
 }
+
 

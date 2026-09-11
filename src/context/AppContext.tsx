@@ -811,75 +811,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (identifier: string, password?: string, role?: UserRole) => {
     try {
-      {
-        const res = await loginUserApi({ identifier, password, role });
-        setCurrentUser(res.user);
-        if (res.role) setCurrentRole(res.role as UserRole);
-        setIsAuthenticated(true);
-        localStorage.setItem('kaushalsetu_auth_v1', JSON.stringify({ user: res.user, role: res.role, token: res.token }));
-        return { success: true, message: res.message };
-      }
+      const res = await loginUserApi({ identifier, password, role });
+      setCurrentUser(res.user);
+      if (res.role) setCurrentRoleState(res.role as UserRole);
+      setIsAuthenticated(true);
+      localStorage.setItem('kaushalsetu_auth_v1', JSON.stringify({ user: res.user, role: res.role, token: res.token }));
+      await refreshFromBackend();
+      return { success: true, message: res.message };
     } catch (err: any) {
-      console.warn('Backend login failed, checking fallback:', err);
+      console.warn('Backend login notice:', err);
+      return { success: false, message: err.message || 'Login failed. Please check your credentials.' };
     }
-
-    // Local persona lookup or creation
-    const targetRole = role || 'customer';
-    const fallbackUser: User = {
-      id: `user-${Date.now()}`,
-      name: identifier.includes('@') ? identifier.split('@')[0] : identifier,
-      mobile: '+91 98421 77312',
-      email: identifier.includes('@') ? identifier : `${identifier}@example.com`,
-      role: targetRole,
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-      location: userLocation,
-      createdAt: new Date().toISOString(),
-    };
-    setCurrentUser(fallbackUser);
-    setCurrentRole(targetRole);
-    setIsAuthenticated(true);
-    localStorage.setItem('kaushalsetu_auth_v1', JSON.stringify({ user: fallbackUser, role: targetRole, token: 'demo-token' }));
-    return { success: true, message: `Welcome back, ${fallbackUser.name}!` };
   };
 
   const registerUser = async (payload: any) => {
     try {
-      {
-        const res = await registerUserApi(payload);
-        setCurrentUser(res.user);
-        if (res.role) setCurrentRole(res.role as UserRole);
-        setIsAuthenticated(true);
-        localStorage.setItem('kaushalsetu_auth_v1', JSON.stringify({ user: res.user, role: res.role, token: res.token }));
-        await refreshFromBackend();
-        return { success: true, message: res.message };
-      }
+      const res = await registerUserApi(payload);
+      setCurrentUser(res.user);
+      if (res.role) setCurrentRoleState(res.role as UserRole);
+      setIsAuthenticated(true);
+      localStorage.setItem('kaushalsetu_auth_v1', JSON.stringify({ user: res.user, role: res.role, token: res.token }));
+      await refreshFromBackend();
+      return { success: true, message: res.message };
     } catch (err: any) {
-      console.warn('Backend register failed, using local fallback:', err);
+      console.warn('Backend register notice:', err);
+      const targetRole = (payload.role as UserRole) || 'customer';
+      const newUser: User = {
+        id: `user-${Date.now()}`,
+        name: payload.name,
+        mobile: payload.mobile,
+        email: payload.email,
+        role: targetRole,
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        location: {
+          lat: payload.lat || userLocation.lat,
+          lng: payload.lng || userLocation.lng,
+          address: payload.address || userLocation.address,
+          city: payload.city || userLocation.city,
+          pincode: payload.pincode || userLocation.pincode,
+        },
+        createdAt: new Date().toISOString(),
+      };
+
+      setCurrentUser(newUser);
+      setCurrentRoleState(targetRole);
+      setIsAuthenticated(true);
+      localStorage.setItem('kaushalsetu_auth_v1', JSON.stringify({ user: newUser, role: targetRole, token: 'demo-token' }));
+      return { success: true, message: 'Account registered successfully!' };
     }
-
-    const targetRole = (payload.role as UserRole) || 'customer';
-    const newUser: User = {
-      id: `user-${Date.now()}`,
-      name: payload.name,
-      mobile: payload.mobile,
-      email: payload.email,
-      role: targetRole,
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-      location: {
-        lat: payload.lat || userLocation.lat,
-        lng: payload.lng || userLocation.lng,
-        address: payload.address || userLocation.address,
-        city: payload.city || userLocation.city,
-        pincode: payload.pincode || userLocation.pincode,
-      },
-      createdAt: new Date().toISOString(),
-    };
-
-    setCurrentUser(newUser);
-    setCurrentRole(targetRole);
-    setIsAuthenticated(true);
-    localStorage.setItem('kaushalsetu_auth_v1', JSON.stringify({ user: newUser, role: targetRole, token: 'demo-token' }));
-    return { success: true, message: 'Account registered successfully!' };
   };
 
   const logout = () => {

@@ -32,6 +32,17 @@ class User(Base):
     password_hash = Column(String(255), nullable=True, default="password123")
     created_at = Column(String(50), default=lambda: datetime.utcnow().isoformat())
 
+class OtpChallenge(Base):
+    __tablename__ = "otp_challenges"
+
+    id = Column(String(50), primary_key=True, index=True)
+    mobile = Column(String(20), nullable=False, index=True)
+    code_hash = Column(String(255), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    attempts = Column(Integer, nullable=False, default=0)
+    consumed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class Cooperative(Base):
     __tablename__ = "cooperatives"
 

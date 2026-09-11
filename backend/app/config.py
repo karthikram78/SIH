@@ -8,7 +8,15 @@ class Settings:
     PROJECT_NAME: str = "Namma Sevai Cooperative Platform API"
     VERSION: str = "1.0.0"
     API_PREFIX: str = "/api"
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./kaushalsetu.db")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql+psycopg2://postgres:postgres@localhost:5432/kaushalsetu")
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "dev-only-change-this-secret-32-bytes-minimum")
+    APP_ENV: str = os.getenv("APP_ENV", "development")
+    JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
+    JWT_EXPIRE_MINUTES: int = int(os.getenv("JWT_EXPIRE_MINUTES", "60"))
+    MSG91_AUTH_KEY: str = os.getenv("MSG91_AUTH_KEY", "")
+    MSG91_TEMPLATE_ID: str = os.getenv("MSG91_TEMPLATE_ID", "")
+    MSG91_OTP_EXPIRY_SECONDS: int = int(os.getenv("MSG91_OTP_EXPIRY_SECONDS", "300"))
+    MSG91_OTP_API_URL: str = os.getenv("MSG91_OTP_API_URL", "https://control.msg91.com/api/v5/otp")
     
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",

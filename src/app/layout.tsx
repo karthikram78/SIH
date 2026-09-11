@@ -1,16 +1,19 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppProvider } from '@/context/AppContext';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { SplashScreen } from '@/components/common/SplashScreen';
 import { AIChatbot } from '@/components/common/AIChatbot';
 
+export const viewport: Viewport = {
+  themeColor: '#d97706',
+};
+
 export const metadata: Metadata = {
   title: 'Avadi Connect — Connecting Skills with Community Needs | Ministry of Cooperation (SIH 2026)',
   description:
     'Cooperative-owned digital service marketplace connecting customers with verified independent local workers for household, personal, community, and emergency services.',
   manifest: '/manifest.json',
-  themeColor: '#d97706',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',

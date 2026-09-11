@@ -15,12 +15,16 @@ import {
   VerificationStatus,
 } from '@/types';
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
+  const token = typeof window !== 'undefined'
+    ? JSON.parse(localStorage.getItem('kaushalsetu_auth_v1') || 'null')?.token
+    : undefined;
   const headers = {
     'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {}),
   };
 
@@ -32,7 +36,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   return response.json();
 }
 
-/** Check if the FastAPI backend is running and healthy */
+/** Check if backend is running and healthy */
 export async function checkBackendHealth(): Promise<boolean> {
   try {
     const res = await fetch(`${API_BASE_URL}/health`, { method: 'GET', cache: 'no-store' });
@@ -313,8 +317,8 @@ export async function registerUserApi(payload: {
   });
 }
 
-export async function sendOtpApi(mobile: string): Promise<{ success: boolean; demoOtp: string; message: string }> {
-  return request<{ success: boolean; demoOtp: string; message: string }>('/auth/send-otp', {
+export async function sendOtpApi(mobile: string): Promise<{ success: boolean; message: string }> {
+  return request<{ success: boolean; message: string }>('/auth/send-otp', {
     method: 'POST',
     body: JSON.stringify({ mobile }),
   });

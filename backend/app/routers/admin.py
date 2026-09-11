@@ -15,6 +15,7 @@ from app.models import (
 )
 from app.schemas import PlatformMetricsResponse, VerificationAuditRecord
 from app.seed import seed_database
+from app.security import require_roles
 
 router = APIRouter(prefix="/admin", tags=["Platform Admin & Metrics"])
 
@@ -74,7 +75,10 @@ def get_verification_audits(db: Session = Depends(get_db)):
     ]
 
 @router.post("/reset-demo")
-def reset_demo_database(db: Session = Depends(get_db)):
+def reset_demo_database(
+    db: Session = Depends(get_db),
+    _admin=Depends(require_roles("platform_admin")),
+):
     # Drop all records and reseed
     db.query(VerificationAudit).delete()
     db.query(Notification).delete()

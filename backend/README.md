@@ -37,6 +37,7 @@ backend/
 │   ├── __init__.py
 │   ├── config.py              # Environment configuration & fee rates
 │   ├── database.py            # SQLAlchemy engine, session & Base
+│   ├── security.py            # Password hashing, JWT validation & role guards
 │   ├── models.py              # Declarative database models (SQLite/PostgreSQL)
 │   ├── schemas.py             # Pydantic v2 schemas matching frontend TypeScript types
 │   ├── seed.py                # Initial database seed script (12 workers, 3 coops, 12 categories)
@@ -59,7 +60,7 @@ backend/
 │       └── demand_forecast.py # Predictive zone demand analytics
 ├── requirements.txt
 ├── test_backend.py            # Comprehensive automated integration test suite
-└── kaushalsetu.db             # SQLite database (auto-created on startup)
+└── kaushalsetu.db             # Optional SQLite database for local development
 ```
 
 ---
@@ -76,7 +77,11 @@ cd backend
 pip install -r requirements.txt
 ```
 
-### 2. Run the Development Server
+### 2. Configure PostgreSQL, JWT, and MSG91
+
+Copy `.env.example` to `.env` and set the values before starting the API. PostgreSQL is the default database; SQLite is supported only when `DATABASE_URL` is explicitly changed for local tests.
+
+### 3. Run the Development Server
 
 ```powershell
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -87,11 +92,13 @@ The API will be live at:
 - **Interactive Swagger Docs**: `http://127.0.0.1:8000/docs`
 - **ReDoc**: `http://127.0.0.1:8000/redoc`
 
-### 3. Run Automated Integration Tests
+### 4. Run Automated Integration Tests
 
 ```powershell
 python test_backend.py
 ```
+
+The authentication endpoints issue signed JWT Bearer tokens. Send them as `Authorization: Bearer <token>`; `/api/auth/me` and platform-admin reset operations enforce the token and role. OTP delivery requires valid MSG91 credentials and never returns the OTP in an API response.
 
 ---
 

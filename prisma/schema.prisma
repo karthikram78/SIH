@@ -1,0 +1,266 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String?
+  mobile       String   @unique
+  email        String?  @unique
+  passwordHash String?
+  role         String   @default("customer") // "customer", "worker", "cooperative_admin", "platform_admin"
+  avatar       String?
+
+  // Location details
+  lat          Float?
+  lng          Float?
+  address      String?
+  city         String?
+  pincode      String?
+  landmark     String?
+
+  registeredAt DateTime @default(now())
+  lastLoginAt  DateTime?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  providerProfile ProviderProfile?
+  serviceRequests ServiceRequest[] @relation("CustomerRequests")
+  bookings        Booking[]        @relation("CustomerBookings")
+  reviewsGiven    RatingReview[]   @relation("CustomerReviews")
+}
+
+model Cooperative {
+  id                   String            @id @default(uuid())
+  name                 String
+  registrationNumber   String
+  district             String
+  state                String
+  membersCount         Int               @default(0)
+  activeWorkersCount   Int               @default(0)
+  monthlyJobsCount     Int               @default(0)
+  monthlyEarningsTotal Float             @default(0)
+  welfareFundBalance   Float             @default(0)
+  contactPerson        String?
+  contactMobile        String?
+  address              String?
+  establishedYear      Int?
+
+  providers            ProviderProfile[]
+}
+
+model ServiceCategory {
+  id             String            @id @default(uuid())
+  name           String
+  group          String
+  description    String?
+  iconName       String?
+  skills         String?           // JSON string of skills array
+  basePrice      Float
+  urgencyDefault String            @default("medium")
+
+  providers       ProviderService[]
+  serviceRequests ServiceRequest[]
+  bookings        Booking[]
+}
+
+model ProviderProfile {
+  id                 String   @id @default(uuid())
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String   @unique
+
+  cooperative        Cooperative? @relation(fields: [cooperativeId], references: [id])
+  cooperativeId      String?
+
+  headline           String?
+  bio                String?
+  primaryCategory    String?
+  skills             String?  // JSON string
+  experienceYears    Int      @default(0)
+  rating             Float    @default(5.0)
+  reviewsCount       Int      @default(0)
+  availability       String   @default("available") // "available", "busy", "offline"
+  isAvailable        Boolean  @default(true)
+  completedJobs      Int      @default(0)
+  serviceRadiusKm    Float    @default(8.0)
+  baseChargePerHour  Float    @default(350.0)
+  verified           Boolean  @default(false)
+  isOverallVerified  Boolean  @default(false)
+  documents          String?  // JSON string of documents array
+  verifications      String?  // JSON string of verification statuses
+  responseTimeMinutes Int     @default(10)
+
+  services           ProviderService[]
+  serviceRequests    ServiceRequest[]  @relation("AssignedWorkerRequests")
+  bookings           Booking[]         @relation("ProviderBookings")
+  reviewsReceived    RatingReview[]    @relation("WorkerReviews")
+  locations          WorkerLocation[]
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model ProviderService {
+  id                String          @id @default(uuid())
+  provider          ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  providerId        String
+  serviceCategory   ServiceCategory @relation(fields: [serviceCategoryId], references: [id], onDelete: Cascade)
+  serviceCategoryId String
+  customPrice       Float?
+
+  @@unique([providerId, serviceCategoryId])
+}
+
+model ServiceRequest {
+  id                 String          @id @default(uuid())
+  
+  customer           User            @relation("CustomerRequests", fields: [customerId], references: [id])
+  customerId         String
+
+  assignedWorker     ProviderProfile? @relation("AssignedWorkerRequests", fields: [assignedWorkerId], references: [id])
+  assignedWorkerId   String?
+
+  serviceCategory    ServiceCategory? @relation(fields: [serviceCategoryId], references: [id])
+  serviceCategoryId  String?
+  categoryName       String?
+  requiredSkill      String?
+  problemDescription String
+
+  urgency            String          @default("medium") // "low", "medium", "high", "emergency"
+  isEmergency        Boolean         @default(false)
+  status             String          @default("requested") // "requested", "accepted", "navigating", "arrived", "in_progress", "completed", "paid", "cancelled"
+
+  // Location where service is required
+  locationLat        Float?
+  locationLng        Float?
+  address            String?
+  city               String?
+  pincode            String?
+
+  amount             Float           @default(450.0)
+  workerEarnings     Float?
+  cooperativeFee     Float?
+  platformFee        Float?
+  
+  paymentStatus      String          @default("pending") // "pending", "completed"
+  paymentMethod      String?         // "UPI", "Cash", "CoopWallet"
+  verificationOtp    String?
+
+  matchScore         Float?
+  matchReasons       String?         // JSON string
+
+  acceptedAt         DateTime?
+  arrivedAt          DateTime?
+  startedAt          DateTime?
+  completedAt        DateTime?
+  paidAt             DateTime?
+
+  rating             Float?
+  reviewText         String?
+
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  bookings           Booking[]
+  reviews            RatingReview[]
+}
+
+model Booking {
+  id                 String          @id @default(uuid())
+  
+  serviceRequest     ServiceRequest? @relation(fields: [serviceRequestId], references: [id])
+  serviceRequestId   String?
+
+  customer           User            @relation("CustomerBookings", fields: [customerId], references: [id])
+  customerId         String
+  
+  provider           ProviderProfile @relation("ProviderBookings", fields: [providerId], references: [id])
+  providerId         String
+  
+  serviceCategory    ServiceCategory? @relation(fields: [serviceCategoryId], references: [id])
+  serviceCategoryId  String?
+
+  status             String          @default("pending") // "pending", "accepted", "navigating", "arrived", "in_progress", "completed", "paid", "cancelled"
+  description        String?
+
+  scheduledAt        DateTime?
+  completedAt        DateTime?
+  totalAmount        Float?
+  workerEarnings     Float?
+  cooperativeFee     Float?
+  platformFee        Float?
+
+  // Location where service is required
+  locationLat        Float?
+  locationLng        Float?
+  address            String?
+
+  rating             Float?
+  reviewText         String?
+
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  trackingLocations  WorkerLocation[]
+}
+
+model WorkerLocation {
+  id               String          @id @default(uuid())
+  worker           ProviderProfile @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  workerId         String
+  booking          Booking?        @relation(fields: [bookingId], references: [id])
+  bookingId        String?
+  lat              Float
+  lng              Float
+  heading          Float?
+  speed            Float?
+  isTrackingActive Boolean         @default(true)
+  updatedAt        DateTime        @default(now()) @updatedAt
+}
+
+model RatingReview {
+  id               String          @id @default(uuid())
+  
+  serviceRequest   ServiceRequest? @relation(fields: [serviceRequestId], references: [id])
+  serviceRequestId String?
+
+  customer         User            @relation("CustomerReviews", fields: [customerId], references: [id])
+  customerId       String
+
+  worker           ProviderProfile @relation("WorkerReviews", fields: [workerId], references: [id])
+  workerId         String
+
+  rating           Float           @default(5.0)
+  reviewText       String?
+  serviceCategory  String?
+
+  createdAt        DateTime        @default(now())
+}
+
+model Notification {
+  id           String   @id @default(uuid())
+  targetRole   String   // "customer", "worker", "cooperative_admin", "platform_admin"
+  targetUserId String?
+  title        String
+  message      String
+  type         String   @default("job") // "job", "verification", "payment", "alert"
+  actionUrl    String?
+  read         Boolean  @default(false)
+  createdAt    DateTime @default(now())
+}
+
+model OtpSession {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  otp       String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
